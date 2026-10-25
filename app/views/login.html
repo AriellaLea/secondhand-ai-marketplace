@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>התחברות — שוק יד שנייה</title>
+  <style>
+    :root { --bg:#f7f4ef; --ink:#1c1917; --muted:#57534e; --accent:#0f766e; --err:#b91c1c; --ok:#047857; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; font-family: "Segoe UI", "Heebo", Arial, sans-serif;
+      background: radial-gradient(ellipse at 20% 0%, #dceeea 0%, transparent 50%),
+                  radial-gradient(ellipse at 100% 100%, #ebe4d8 0%, transparent 45%), var(--bg);
+      color: var(--ink); display: flex; align-items: center; justify-content: center; padding: 2rem;
+    }
+    main { width: 100%; max-width: 22rem; }
+    h1 { margin: 0 0 0.5rem; font-size: 1.75rem; color: var(--accent); }
+    p { margin: 0 0 1.25rem; color: var(--muted); font-size: 0.95rem; }
+    label { display: block; margin: 0.75rem 0 0.25rem; font-size: 0.9rem; }
+    input {
+      width: 100%; padding: 0.65rem 0.75rem; border: 1px solid #d6d3d1; border-radius: 0.4rem;
+      font-size: 1rem; background: #fff;
+    }
+    button {
+      margin-top: 1.25rem; width: 100%; padding: 0.75rem; border: 0; border-radius: 0.4rem;
+      background: var(--accent); color: #fff; font-size: 1rem; cursor: pointer;
+    }
+    .flash { padding: 0.6rem 0.75rem; border-radius: 0.4rem; margin-bottom: 1rem; font-size: 0.9rem; }
+    .flash.error { background: #fef2f2; color: var(--err); }
+    .flash.ok { background: #ecfdf5; color: var(--ok); }
+    .links { margin-top: 1rem; text-align: center; font-size: 0.9rem; }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>התחברות</h1>
+    <p>היכנסו עם האימייל והסיסמה שלכם.</p>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+    <form method="post" action="{{ url_for('auth.login') }}">
+      <label for="email">אימייל</label>
+      <input id="email" name="email" type="email" required autocomplete="username">
+      <label for="password">סיסמה</label>
+      <input id="password" name="password" type="password" required autocomplete="current-password">
+      <button type="submit">התחברות</button>
+    </form>
+    <p class="links">אין לכם חשבון? <a href="{{ url_for('auth.register') }}">הרשמה</a></p>
+  </main>
+</body>
+</html>

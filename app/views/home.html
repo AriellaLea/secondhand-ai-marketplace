@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>שוק יד שנייה</title>
+  <style>
+    :root { --bg:#f7f4ef; --ink:#1c1917; --muted:#57534e; --accent:#0f766e; --ok:#047857; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; font-family: "Segoe UI", "Heebo", Arial, sans-serif;
+      background: radial-gradient(ellipse at 20% 0%, #dceeea 0%, transparent 50%),
+                  radial-gradient(ellipse at 100% 100%, #ebe4d8 0%, transparent 45%), var(--bg);
+      color: var(--ink);
+    }
+    header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 1rem 1.5rem; border-bottom: 1px solid #e7e5e4;
+    }
+    header .brand { font-weight: 700; color: var(--accent); text-decoration: none; }
+    header nav { display: flex; gap: 0.75rem; align-items: center; font-size: 0.95rem; }
+    header button, header a.btn {
+      border: 0; background: var(--accent); color: #fff; padding: 0.4rem 0.75rem;
+      border-radius: 0.35rem; cursor: pointer; text-decoration: none; font-size: 0.9rem;
+    }
+    main { max-width: 36rem; margin: 4rem auto; padding: 0 1.5rem; text-align: center; }
+    h1 { margin: 0 0 0.75rem; font-size: clamp(2rem, 5vw, 2.75rem); color: var(--accent); }
+    p { margin: 0; font-size: 1.125rem; line-height: 1.6; color: var(--muted); }
+    .flash { max-width: 36rem; margin: 1rem auto; padding: 0.6rem 0.75rem; border-radius: 0.4rem; }
+    .flash.ok { background: #ecfdf5; color: var(--ok); }
+    .role { display: inline-block; margin-top: 1rem; color: var(--ink); font-size: 0.95rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <a class="brand" href="{{ url_for('home.index') }}">שוק יד שנייה</a>
+    <nav>
+      <span>{{ user.name }}</span>
+      <form method="post" action="{{ url_for('auth.logout') }}" style="margin:0">
+        <button type="submit">התנתקות</button>
+      </form>
+    </nav>
+  </header>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="flash {{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+  <main>
+    <h1>שוק יד שנייה</h1>
+    <p>ברוכים הבאים. כאן מוכרים מפרסמים מודעות, וסוכן בינה מלאכותית בודק אותן לפני הפרסום.</p>
+    <p class="role">
+      {% if user.role == 'moderator' %}
+        התחברתם כמפקח/ת.
+      {% else %}
+        התחברתם כמוכר/ת.
+      {% endif %}
+    </p>
+  </main>
+</body>
+</html>

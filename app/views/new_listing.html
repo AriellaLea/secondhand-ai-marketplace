@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>פרסום מודעה — שוק יד שנייה</title>
+  <style>
+    :root { --bg:#f7f4ef; --ink:#1c1917; --muted:#57534e; --accent:#0f766e; --err:#b91c1c; --ok:#047857; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; font-family: "Segoe UI", "Heebo", Arial, sans-serif;
+      background: radial-gradient(ellipse at 20% 0%, #dceeea 0%, transparent 50%),
+                  radial-gradient(ellipse at 100% 100%, #ebe4d8 0%, transparent 45%), var(--bg);
+      color: var(--ink);
+    }
+    header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 1rem 1.5rem; border-bottom: 1px solid #e7e5e4;
+    }
+    header .brand { font-weight: 700; color: var(--accent); text-decoration: none; }
+    header nav { display: flex; gap: 0.75rem; align-items: center; font-size: 0.95rem; }
+    header button {
+      border: 0; background: var(--accent); color: #fff; padding: 0.4rem 0.75rem;
+      border-radius: 0.35rem; cursor: pointer; font-size: 0.9rem;
+    }
+    main { max-width: 32rem; margin: 2.5rem auto; padding: 0 1.5rem; }
+    h1 { margin: 0 0 0.5rem; font-size: 1.75rem; color: var(--accent); }
+    p { margin: 0 0 1.25rem; color: var(--muted); font-size: 0.95rem; }
+    label { display: block; margin: 0.9rem 0 0.25rem; font-size: 0.9rem; }
+    input, textarea, select {
+      width: 100%; padding: 0.65rem 0.75rem; border: 1px solid #d6d3d1; border-radius: 0.4rem;
+      font-size: 1rem; background: #fff; font-family: inherit; color: inherit;
+    }
+    textarea { min-height: 8rem; resize: vertical; }
+    .price { display: flex; align-items: center; gap: 0.5rem; }
+    .price span { color: var(--muted); }
+    button.primary {
+      margin-top: 1.5rem; width: 100%; padding: 0.75rem; border: 0; border-radius: 0.4rem;
+      background: var(--accent); color: #fff; font-size: 1rem; cursor: pointer;
+    }
+    .flash { padding: 0.6rem 0.75rem; border-radius: 0.4rem; margin-bottom: 1rem; font-size: 0.9rem; }
+    .flash.error { background: #fef2f2; color: var(--err); }
+    .flash.ok { background: #ecfdf5; color: var(--ok); }
+    .links { margin-top: 1rem; text-align: center; font-size: 0.9rem; }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <header>
+    <a class="brand" href="{{ url_for('home.index') }}">שוק יד שנייה</a>
+    <nav>
+      <span>{{ user.name }}</span>
+      <form method="post" action="{{ url_for('auth.logout') }}" style="margin:0">
+        <button type="submit">התנתקות</button>
+      </form>
+    </nav>
+  </header>
+  <main>
+    <h1>פרסום מודעה</h1>
+    <p>כל השדות חובה. לאחר הפרסום המודעה תיבדק לפני שתוצג לקונים.</p>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+    <form method="post" action="{{ url_for('listings.create') }}">
+      <label for="title">כותרת</label>
+      <input id="title" name="title" type="text" required maxlength="200" value="{{ form.get('title', '') }}">
+
+      <label for="description">תיאור</label>
+      <textarea id="description" name="description" required maxlength="5000">{{ form.get('description', '') }}</textarea>
+
+      <label for="price">מחיר</label>
+      <div class="price">
+        <input id="price" name="price" type="number" required min="0.01" step="0.01" inputmode="decimal" value="{{ form.get('price', '') }}">
+        <span>₪</span>
+      </div>
+
+      <label for="category">קטגוריה</label>
+      <select id="category" name="category" required>
+        <option value="" disabled {% if not form.get('category') %}selected{% endif %}>בחרו קטגוריה</option>
+        {% for key, label in categories.items() %}
+          <option value="{{ key }}" {% if form.get('category') == key %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+
+      <button class="primary" type="submit">פרסום</button>
+    </form>
+    <p class="links"><a href="{{ url_for('home.index') }}">חזרה לדף הבית</a></p>
+  </main>
+</body>
+</html>

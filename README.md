@@ -43,3 +43,11 @@ Open http://127.0.0.1:5000/ — you should see the Hebrew home page (RTL).
 | `app/mcp_tools/` | MCP tools for the agent |
 | `agent/` | Separate Deep Agent process |
 | `docs/` | PRD, architecture, tests |
+
+## Tests
+
+```bash
+python -m pytest -q
+```
+
+Tests use a temporary SQLite file, never the cloud database.

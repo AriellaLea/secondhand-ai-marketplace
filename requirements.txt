@@ -3,3 +3,4 @@ SQLAlchemy
 psycopg[binary]
 python-dotenv
 Werkzeug
+pytest

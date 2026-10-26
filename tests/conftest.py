@@ -53,3 +53,28 @@ def make_user(db, email, role):
 
 def login(client, email):
     return client.post("/login", data={"email": email, "password": "password123"})
+
+
+def make_listing(db, seller, title, status, description="תיאור", category="other",
+                 price="100", created_at=None, rejection_reason=None):
+    """Insert a read-model row directly; statuses past Pending evaluation have no command yet."""
+    import uuid
+    from datetime import datetime, timezone
+    from decimal import Decimal
+
+    from app.models.listing import Listing
+
+    listing = Listing(
+        id=str(uuid.uuid4()),
+        seller_id=seller.id,
+        title=title,
+        description=description,
+        category=category,
+        price=Decimal(price),
+        status=status,
+        rejection_reason=rejection_reason,
+        created_at=created_at or datetime.now(timezone.utc),
+    )
+    db.add(listing)
+    db.commit()
+    return listing

@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}חיפוש מודעות{% endblock %}
+{% block styles %}
+    form.search { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; }
+    form.search input { flex: 1 1 14rem; }
+    .results { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.75rem; }
+    .results li a {
+      display: block; padding: 1rem 1.25rem; background: #fff; border: 1px solid var(--line);
+      border-radius: 0.5rem; color: inherit; text-decoration: none;
+    }
+    .results li a:hover { border-color: var(--accent); }
+    .results .top { display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; }
+    .results h2 { margin: 0; font-size: 1.1rem; color: var(--accent); }
+    .results .desc { margin: 0.4rem 0; color: var(--muted); font-size: 0.95rem;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .results .meta { font-size: 0.85rem; color: var(--muted); display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    .count { color: var(--muted); font-size: 0.9rem; margin-bottom: 0.75rem; }
+{% endblock %}
+{% block content %}
+  <h1>חיפוש מודעות</h1>
+  <p class="lead">
+    {% if user.role == 'moderator' %}
+      חיפוש בכל המודעות, בכל הסטטוסים.
+    {% else %}
+      חיפוש במודעות שאושרו לפרסום.
+    {% endif %}
+  </p>
+
+  <form class="search" method="get" action="{{ url_for('listings.search') }}">
+    <input name="q" type="search" placeholder="מילה מהכותרת או מהתיאור" value="{{ query.keyword }}" aria-label="מילת חיפוש">
+    <select name="category" aria-label="קטגוריה">
+      <option value="">כל הקטגוריות</option>
+      {% for key, label in categories.items() %}
+        <option value="{{ key }}" {% if query.category == key %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button class="primary" type="submit">חיפוש</button>
+  </form>
+
+  {% if results %}
+    <p class="count">נמצאו {{ results|length }} מודעות</p>
+    <ul class="results">
+      {% for item in results %}
+        <li>
+          <a href="{{ url_for('listings.show', listing_id=item.id) }}">
+            <div class="top">
+              <h2>{{ item.title }}</h2>
+              <span class="price">{{ "{:,.2f}".format(item.price) }} ₪</span>
+            </div>
+            <p class="desc">{{ item.description }}</p>
+            <div class="meta">
+              <span>{{ categories.get(item.category, item.category) }}</span>
+              <span>{{ item.seller_name }}</span>
+              <span>{{ item.created_at.strftime('%d/%m/%Y') }}</span>
+              {% if user.role == 'moderator' %}
+                <span class="badge {{ item.status }}">{{ statuses.get(item.status, item.status) }}</span>
+              {% endif %}
+            </div>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="empty">לא נמצאו מודעות</div>
+  {% endif %}
+{% endblock %}

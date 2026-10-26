@@ -19,9 +19,15 @@ CATEGORIES = {
 }
 
 STATUS_PENDING_EVALUATION = "pending_evaluation"
+STATUS_EVALUATED = "evaluated"
+STATUS_APPROVED = "approved"
+STATUS_REJECTED = "rejected"
 
 STATUS_LABELS = {
     STATUS_PENDING_EVALUATION: "ממתינה להערכה",
+    STATUS_EVALUATED: "הוערכה",
+    STATUS_APPROVED: "אושרה",
+    STATUS_REJECTED: "נדחתה",
 }
 
 

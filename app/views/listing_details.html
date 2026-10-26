@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}{{ details.listing.title }}{% endblock %}
+{% block styles %}
+    article, section.assessment { background: #fff; border: 1px solid var(--line); border-radius: 0.5rem; padding: 1.5rem; }
+    .head { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; flex-wrap: wrap; }
+    .head .price { font-size: 1.5rem; font-weight: 700; }
+    .description { white-space: pre-line; line-height: 1.7; margin: 1rem 0 1.5rem; }
+    dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.5rem 1.5rem; margin: 0; }
+    dt { color: var(--muted); }
+    dd { margin: 0; }
+    .reason { margin-top: 1.25rem; padding: 0.75rem 1rem; background: #fef2f2; color: var(--err); border-radius: 0.4rem; }
+    section.assessment { margin-top: 1.25rem; }
+    section.assessment h2 { margin: 0 0 0.5rem; font-size: 1.1rem; }
+    section.assessment p { margin: 0; color: var(--muted); }
+    .back { margin-top: 1.25rem; }
+{% endblock %}
+{% block content %}
+  {% set item = details.listing %}
+  <article>
+    <div class="head">
+      <h1>{{ item.title }}</h1>
+      <span class="price">{{ "{:,.2f}".format(item.price) }} ₪</span>
+    </div>
+    <p class="description">{{ item.description }}</p>
+    <dl>
+      <dt>קטגוריה</dt><dd>{{ categories.get(item.category, item.category) }}</dd>
+      <dt>מוכר/ת</dt><dd>{{ item.seller_name }}</dd>
+      <dt>תאריך פרסום</dt><dd>{{ item.created_at.strftime('%d/%m/%Y') }}</dd>
+      <dt>סטטוס</dt><dd><span class="badge {{ item.status }}">{{ statuses.get(item.status, item.status) }}</span></dd>
+    </dl>
+    {% if details.rejection_reason %}
+      <div class="reason"><strong>סיבת הדחייה:</strong> {{ details.rejection_reason }}</div>
+    {% endif %}
+  </article>
+
+  {% if details.show_assessment %}
+    <section class="assessment">
+      <h2>הערכת הסוכן</h2>
+      <p>המודעה טרם הוערכה על ידי הסוכן.</p>
+    </section>
+  {% endif %}
+
+  <p class="back"><a href="{{ url_for('listings.index') }}">חזרה לטבלת המודעות</a></p>
+{% endblock %}

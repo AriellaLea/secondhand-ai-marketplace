@@ -72,11 +72,11 @@ A listing moves through these statuses: Pending evaluation → Evaluated → App
 
 ### F3 – Search listings
 
-**User story:** As a user, I want to search listings by keyword, category and price range so that I can quickly find what I am looking for.
+**User story:** As a user, I want to search listings by keyword and category so that I can quickly find what I am looking for.
 
 **Acceptance criteria:**
 
-- Search matches a keyword in the title and the description, and can be combined with a category filter and a minimum and maximum price.
+- Search matches a keyword in the title and the description, and can be combined with a category filter.
 - A logged-in seller sees only Approved listings in search results; a moderator sees listings in every status.
 - If nothing matches, the page shows a "no listings found" message.
 - Results appear within a few seconds on the demo data.
@@ -96,7 +96,7 @@ A listing moves through these statuses: Pending evaluation → Evaluated → App
 
 ### F5 – Listings table
 
-**User story:** As a moderator, I want to see all listings in a table with the agent's score so that I can decide what to handle first. As a seller, I want a table of my own listings only.
+**User story:** As a moderator, I want to see all listings in a table with the agent's score so that I can decide what to handle first. As a seller, I want a table of all my own listings and the approved listings of other sellers.
 
 **Acceptance criteria:**
 
@@ -105,7 +105,7 @@ A listing moves through these statuses: Pending evaluation → Evaluated → App
 - A moderator cannot approve or reject a listing that is still Pending evaluation (see F8).
 - The table can be sorted by a column and filtered by status.
 - Clicking a row opens the listing details (F4).
-- A seller sees only their own listings.
+- A seller sees all of their own listings, in every status, plus the Approved listings of other sellers.
 
 ### F6 – Dashboard
 

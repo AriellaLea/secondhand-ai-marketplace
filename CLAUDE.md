@@ -24,7 +24,10 @@ Done:
   (`scripts/create_agent_user.py`).
 
 In progress / next:
-- F7 AI agent, then F8 moderator decision.
+- F7 AI agent (Deep Agents + Chroma RAG + Tavily MCP + our two MCP tools),
+  then F8 moderator decision. Plan each with the grilling skill first.
+- Gap from F4: the moderator's event history of a listing is not shown yet.
+- Before running F7 on Neon: `python scripts/create_agent_user.py` once.
 
 Decisions:
 - Database: Neon PostgreSQL (cloud); tests use temporary SQLite.

@@ -46,4 +46,9 @@ def handle_search_listings(session: Session, query: SearchListingsQuery) -> list
         stmt = stmt.where(Listing.category == category)
     stmt = stmt.order_by(Listing.created_at.desc(), Listing.id)
 
-    return [to_summary(listing, seller_name) for listing, seller_name in session.execute(stmt)]
+    # A seller never gets the agent score, not even in the DTO.
+    show_score = query.viewer.is_moderator
+    return [
+        to_summary(listing, seller_name, score if show_score else None)
+        for listing, seller_name, score in session.execute(stmt)
+    ]

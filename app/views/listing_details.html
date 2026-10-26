@@ -11,7 +11,15 @@
     .reason { margin-top: 1.25rem; padding: 0.75rem 1rem; background: #fef2f2; color: var(--err); border-radius: 0.4rem; }
     section.assessment { margin-top: 1.25rem; }
     section.assessment h2 { margin: 0 0 0.5rem; font-size: 1.1rem; }
-    section.assessment p { margin: 0; color: var(--muted); }
+    section.assessment p.muted { margin: 0; color: var(--muted); }
+    .score-head { display: flex; gap: 1.5rem; align-items: baseline; flex-wrap: wrap; margin-bottom: 1rem; }
+    .score-head .score { font-size: 2rem; font-weight: 700; }
+    .score-head .score small { font-size: 1rem; color: var(--muted); font-weight: 400; }
+    .subscores { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+    .subscores th, .subscores td { text-align: right; padding: 0.5rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+    .subscores td.points { white-space: nowrap; font-weight: 600; }
+    .reasoning { white-space: pre-line; line-height: 1.7; margin: 1rem 0 0; }
+    .ids { font-family: ui-monospace, monospace; font-size: 0.85rem; direction: ltr; text-align: left; }
     .back { margin-top: 1.25rem; }
 {% endblock %}
 {% block content %}
@@ -36,7 +44,31 @@
   {% if details.show_assessment %}
     <section class="assessment">
       <h2>הערכת הסוכן</h2>
-      <p>המודעה טרם הוערכה על ידי הסוכן.</p>
+      {% set a = details.assessment %}
+      {% if a %}
+        <div class="score-head">
+          <span class="score">{{ a.score }} <small>/ 100</small></span>
+          <span><strong>המלצה:</strong> {{ recommendations.get(a.recommendation, a.recommendation) }}</span>
+          <span><strong>ביטחון:</strong> {{ confidences.get(a.confidence, a.confidence) }}</span>
+        </div>
+        <table class="subscores">
+          <thead><tr><th>קריטריון</th><th>ניקוד</th><th>הסבר</th></tr></thead>
+          <tbody>
+            <tr><td>מחיר מול השוק</td><td class="points">{{ a.price_vs_market }} / 50</td><td>{{ a.price_vs_market_reason }}</td></tr>
+            <tr><td>מחיר מול מודעות דומות</td><td class="points">{{ a.price_vs_similar }} / 25</td><td>{{ a.price_vs_similar_reason }}</td></tr>
+            <tr><td>איכות המודעה</td><td class="points">{{ a.listing_quality }} / 25</td><td>{{ a.listing_quality_reason }}</td></tr>
+          </tbody>
+        </table>
+        <dl>
+          <dt>טווח מחירי שוק</dt><dd>{{ "{:,.2f}".format(a.market_price_min) }} – {{ "{:,.2f}".format(a.market_price_max) }} ₪</dd>
+          <dt>מודעות דומות</dt>
+          <dd>{% if a.similar_listing_ids %}<span class="ids">{{ a.similar_listing_ids|join(', ') }}</span>{% else %}לא נמצאו{% endif %}</dd>
+          <dt>תאריך הערכה</dt><dd>{{ a.evaluated_at.strftime('%d/%m/%Y %H:%M') }}</dd>
+        </dl>
+        <p class="reasoning"><strong>נימוק:</strong> {{ a.reasoning }}</p>
+      {% else %}
+        <p class="muted">המודעה טרם הוערכה על ידי הסוכן.</p>
+      {% endif %}
     </section>
   {% endif %}
 

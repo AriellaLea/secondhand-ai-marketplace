@@ -54,6 +54,7 @@
               <span>{{ item.created_at.strftime('%d/%m/%Y') }}</span>
               {% if user.role == 'moderator' %}
                 <span class="badge {{ item.status }}">{{ statuses.get(item.status, item.status) }}</span>
+                <span>ציון הסוכן: {% if item.score is not none %}{{ item.score }}{% else %}טרם הוערכה{% endif %}</span>
               {% endif %}
             </div>
           </a>

@@ -18,10 +18,13 @@ Done:
   F5 listings table, F6 moderator dashboard.
 - Phase 6: Chroma vector DB with 30 sample listings (`app/vector_store.py`,
   `scripts/load_sample_listings.py`, `scripts/try_similar.py`).
+- Phase 7: own MCP tools `get_pending_listing` and `save_assessment`
+  (`app/mcp_tools/server.py`, stdio), Listing evaluated event, `assessments`
+  read model shown to moderators in F4/F5, agent service account
+  (`scripts/create_agent_user.py`).
 
 In progress / next:
-- Phase 7: two own MCP tools (get pending listing, save assessment).
-- Then F7 AI agent, then F8 moderator decision.
+- F7 AI agent, then F8 moderator decision.
 
 Decisions:
 - Database: Neon PostgreSQL (cloud); tests use temporary SQLite.
@@ -30,3 +33,6 @@ Decisions:
 - Agent LLM: `qwen2.5:3b` via Ollama (Mac with 8 GB RAM).
 - Call Ollama through its HTTP API; the `ollama` Python package hangs.
 - A seller's table shows their own listings plus others' Approved ones.
+- MCP: official `mcp` SDK 1.x (`FastMCP`); `langchain-mcp-adapters` needs `mcp<2`.
+- If web search or the model fails, nothing is saved; the listing stays Pending.
+- The program, not the LLM, adds up the score and sets recommendation and confidence.

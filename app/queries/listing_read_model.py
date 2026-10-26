@@ -6,6 +6,7 @@ from decimal import Decimal
 
 from sqlalchemy import Select, or_, select, true
 
+from app.models.assessment import Assessment
 from app.models.listing import STATUS_APPROVED, Listing
 from app.models.user import User
 
@@ -31,7 +32,7 @@ class ListingSummary:
     seller_id: int
     seller_name: str
     created_at: datetime
-    score: int | None = None  # filled from the assessments read model once F7 exists
+    score: int | None = None  # agent score from the assessments read model; None until evaluated
 
 
 def visible_to(viewer: Viewer):
@@ -42,10 +43,15 @@ def visible_to(viewer: Viewer):
 
 
 def select_listings_with_seller() -> Select:
-    return select(Listing, User.name).join(User, User.id == Listing.seller_id)
+    """Rows of (Listing, seller name, agent score or None)."""
+    return (
+        select(Listing, User.name, Assessment.score)
+        .join(User, User.id == Listing.seller_id)
+        .outerjoin(Assessment, Assessment.listing_id == Listing.id)
+    )
 
 
-def to_summary(listing: Listing, seller_name: str) -> ListingSummary:
+def to_summary(listing: Listing, seller_name: str, score: int | None = None) -> ListingSummary:
     return ListingSummary(
         id=listing.id,
         title=listing.title,
@@ -56,4 +62,5 @@ def to_summary(listing: Listing, seller_name: str) -> ListingSummary:
         seller_id=listing.seller_id,
         seller_name=seller_name,
         created_at=listing.created_at,
+        score=score,
     )

@@ -128,7 +128,7 @@ A listing moves through these statuses: Pending evaluation → Evaluated → App
 - For each listing it creates an assessment: a score from 0 to 100 (see Scoring in section 6), a recommendation (approve, reject or manual review), the market price range found on the web, similar listings from the vector database and a short reasoning in Hebrew.
 - The assessment is saved, the status changes to Evaluated and an "evaluated" event is stored (Event Sourcing).
 - The agent never approves or rejects a listing by itself; the decision belongs to the moderator.
-- If the internet search fails, the assessment states that the search did not work, and no market price is shown.
+- If the internet search or the model fails, nothing is saved: the listing stays Pending evaluation and the agent evaluates it again later.
 
 ### F8 – Moderator decision
 
@@ -149,7 +149,7 @@ Three main entities plus an event log. The status of a listing is built from the
 | --- | --- |
 | User | id, name, email, password (hashed), role (seller or moderator) |
 | Listing | id, seller id, title, description, price (ILS), category, status, publication date |
-| Agent assessment | listing id, score (0–100) and its three sub-scores, recommendation, market price range, similar listing ids, reasoning, confidence |
+| Agent assessment | listing id, score (0–100) and its three sub-scores with a one-line justification each, recommendation, market price range, similar listing ids, reasoning, confidence (low, medium or high) |
 | Event | id, listing id, event type, event data, actor, timestamp |
 
 **Event types:** listing created, listing evaluated, listing approved, listing rejected.
@@ -180,9 +180,11 @@ The agent runs as an independent process, reads listings from the database, chec
 
 **Recommendation from the score:** 70 or more: approve; 40 to 69: manual review; below 40: reject. These thresholds are a starting point and will be adjusted during testing.
 
+**Confidence:** computed by the program, not by the model: low when no similar listing was found; high with at least 3 similar listings and a market range where the maximum is at most twice the minimum; medium otherwise.
+
 **Vector database:** filled from two sources: sample listings loaded at the start (about 30 are enough for testing), and every listing approved afterwards.
 
-**Errors:** if the internet search or the model fails, the assessment states what went wrong and the agent moves on to the next listing.
+**Errors:** if the internet search or the model fails, no assessment is saved and the listing stays Pending evaluation. The agent logs what went wrong, moves on to the next listing, and tries the failed one again on its next run.
 
 ## 7. Non-functional requirements
 

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from sqlalchemy.orm import Session
 from werkzeug.security import check_password_hash
 
-from app.models.user import User
+from app.models.user import ROLE_MODERATOR, ROLE_SELLER, User
 
 
 class AuthError(Exception):
@@ -23,6 +23,9 @@ def handle_authenticate_user(session: Session, query: AuthenticateUserQuery) -> 
     password = query.password or ""
 
     user = session.query(User).filter_by(email=email).first()
-    if user is None or not check_password_hash(user.password_hash, password):
+    # Only people log in; the agent service account never does.
+    if user is None or user.role not in (ROLE_SELLER, ROLE_MODERATOR):
+        raise AuthError("אימייל או סיסמה שגויים.")
+    if not check_password_hash(user.password_hash, password):
         raise AuthError("אימייל או סיסמה שגויים.")
     return user

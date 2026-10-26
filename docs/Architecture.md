@@ -100,7 +100,7 @@ Four tables in the cloud database; the first is the write side, the others are r
 | events | Write (event store) | id, listing id, event type, payload (JSON), actor id, created at | Append-only log of everything that happened |
 | users | Read model | id, name, email, password hash, role (seller or moderator) | Authentication and roles |
 | listings | Read model | id, seller id, title, description, category, price, status, rejection reason, created at | Search, details and the listings table |
-| assessments | Read model | listing id, score, three sub-scores, recommendation, market price range, similar listing ids, reasoning, confidence | Shown to moderators only |
+| assessments | Read model | listing id, score, three sub-scores and their justifications, recommendation, confidence, market price min and max, similar listing ids, reasoning, evaluated at | Shown to moderators only |
 
 Passwords are stored as hashes, never as plain text. The dashboard counts by status and category are computed from the listings table.
 
@@ -116,7 +116,7 @@ For each pending listing it:
 4. Produces the assessment: score (50/25/25 across three criteria, as in the PRD), recommendation, price range, similar listing ids, reasoning, confidence.
 5. Saves it through a second MCP tool, which raises the Listing evaluated event.
 
-If the web search fails, the assessment says so plainly and is still saved.
+If the web search or the model fails, nothing is saved: the listing stays Pending evaluation and is tried again later. Within one run the agent passes the ids it failed on to `get_pending_listing` (`exclude_ids`), so one bad listing does not block the queue.
 
 Building blocks:
 
@@ -132,18 +132,28 @@ MCP (Model Context Protocol) is the standard way the agent calls tools. Each too
 
 | Tool | Built with | What it does |
 | --- | --- | --- |
-| Get pending listing | MCP Studio, our own tool | Returns the next listing in status Pending evaluation |
-| Save assessment | MCP Studio, our own tool | Stores the assessment and raises the Listing evaluated event |
+| `get_pending_listing(exclude_ids=[])` | Our own tool (FastMCP), tested in MCP Inspector | Returns the oldest listing in status Pending evaluation (id, title, description, price, category, created at), or null. Reads only, locks nothing. |
+| `save_assessment(...)` | Our own tool (FastMCP), tested in MCP Inspector | Takes the three sub-scores with a one-line reason each, the market price range, the similar listing ids and the Hebrew reasoning. The program adds up the score and derives the recommendation and the confidence, then raises the Listing evaluated event. Refused if the listing is not Pending evaluation or any field is invalid; then nothing is saved. |
 | Web search | Tavily MCP service | Finds market prices for similar items on the web |
 
 The two own tools are the two Tools required by the assignment. The agent loads them with `load_mcp_tools` and decides when to call each one.
+
+Implementation:
+
+- Server: `app/mcp_tools/server.py`, built with the official `mcp` SDK (`FastMCP`, version 1.x because `langchain-mcp-adapters` requires it). It runs over **stdio**: the agent starts it as a subprocess with `python -m app.mcp_tools.server`, so it opens no network port.
+- The server is a thin adapter, like a controller: each tool opens its own database session, calls one handler and returns JSON. The rules live in `app/queries/get_pending_listing.py` (query) and `app/commands/record_assessment.py` (command).
+- Validation errors go back to the model as MCP tool errors, in English, so it can fix its call.
+- The Listing evaluated event stores the computed score, recommendation and confidence too, so a replay gives back what was decided at the time even if the thresholds change.
+- The event's actor is the agent's service account (`agent@system.local`, role `agent`), created by `scripts/create_agent_user.py`. The agent process never logs in with it.
+- Manual check: `npx @modelcontextprotocol/inspector .venv/bin/python -m app.mcp_tools.server`.
 
 ## 10. Security
 
 - Passwords are hashed before storage.
 - Secrets (database connection string, Tavily key) live in `.env.local`, listed in `.gitignore`, never committed.
 - Every controller checks the logged-in user's role on the server; hiding a button is not enough.
-- Only moderators can read assessments and call approve or reject; sellers get no route to them.
+- Only moderators can read assessments and call approve or reject; sellers get no route to them, and query handlers drop the agent score from what they return to a seller.
+- The agent's service account (role `agent`) has a random password that is never shown, and the login refuses any role other than seller or moderator.
 - Registration only creates sellers; moderators have no sign-up form and are created directly in the database by a small script (hashed password). A moderator logs in on the same login page as sellers, and the server reads the role from the users table to decide which pages are available.
 - All database access uses parameterized queries.
 

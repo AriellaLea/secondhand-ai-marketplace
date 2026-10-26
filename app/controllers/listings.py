@@ -9,6 +9,7 @@ from app.commands.publish_listing import (
     handle_publish_listing,
 )
 from app.db import get_session
+from app.models.assessment import CONFIDENCE_LABELS, RECOMMENDATION_LABELS
 from app.models.listing import CATEGORIES, STATUS_LABELS
 from app.queries.get_listing_details import (
     GetListingDetailsQuery,
@@ -81,6 +82,8 @@ def show(listing_id):
         details=details,
         categories=CATEGORIES,
         statuses=STATUS_LABELS,
+        recommendations=RECOMMENDATION_LABELS,
+        confidences=CONFIDENCE_LABELS,
     )
 
 

@@ -34,6 +34,14 @@ Every test checks one rule from the PRD or one design choice from architecture.m
 | T-F8-2 | F8 Moderator decision | A moderator rejects an Evaluated listing with a reason | Status becomes Rejected, the reason is stored and a Rejected event is recorded | ☐ |
 | T-F8-3 | F8 Moderator decision | A moderator opens a listing whose AI evaluation is still Pending | The Approve and Reject buttons are not displayed until the evaluation is finished; sending the action directly is refused | ☐ |
 
+| T-MCP-1 | Phase 7 MCP tools | Call `get_pending_listing` with two Pending listings, then with the first one in `exclude_ids` | The oldest Pending listing is returned, then the next one; null when none is left; nothing is written | ☐ |
+| T-MCP-2 | Phase 7 MCP tools | Call `save_assessment` with valid sub-scores, price range and similar ids | A Listing evaluated event with the agent as actor; an assessment with the computed score, recommendation and confidence; status Evaluated | ☐ |
+| T-MCP-3 | Phase 7 MCP tools | Call `save_assessment` with a sub-score out of range, an empty reason, a missing price range or min above max | A tool error is returned; no event, no assessment, status stays Pending evaluation | ☐ |
+| T-MCP-4 | Phase 7 MCP tools | Call `save_assessment` twice for the same listing | The second call is refused; there is only one Listing evaluated event | ☐ |
+| T-MCP-5 | Phase 7 MCP tools | Try to log in with the agent account | Login is refused | ☐ |
+| T-MCP-6 | Phase 7 MCP tools | After `save_assessment`, open the listing as moderator and as seller | The moderator sees score, sub-scores, reasons, recommendation, confidence, price range and reasoning, and the score in the table; the seller sees none of it | ☐ |
+| T-MCP-7 | Phase 7 MCP tools | Open the server in MCP Inspector and call both tools | Both tools are listed with their parameters and work over stdio | ☐ |
+
 F7 (the AI agent) is tested in section 5.
 
 ## 3. Role and visibility tests

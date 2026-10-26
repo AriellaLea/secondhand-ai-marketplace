@@ -56,7 +56,7 @@
             {{ sort_header('price', 'מחיר') }}
             {{ sort_header('status', 'סטטוס') }}
             {{ sort_header('date', 'תאריך פרסום') }}
-            {% if user.role == 'moderator' %}<th>ציון הסוכן</th>{% endif %}
+            {% if user.role == 'moderator' %}{{ sort_header('score', 'ציון הסוכן') }}{% endif %}
           </tr>
         </thead>
         <tbody>

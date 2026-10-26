@@ -30,6 +30,19 @@ python run.py
 
 Open http://127.0.0.1:5000/ — you should see the Hebrew home page (RTL).
 
+## Vector database (similar listings)
+
+Requires [Ollama](https://ollama.com) running locally with the embedding model:
+
+```bash
+ollama pull bge-m3
+python scripts/load_sample_listings.py --reset   # embed data/sample_listings.json into data/chroma/
+python scripts/try_similar.py                    # demo queries
+python scripts/try_similar.py --title "iPhone 13" --description "black, 128GB" -k 3
+```
+
+`data/chroma/` is local and not committed; rerun the load script to rebuild it.
+
 ## Layout
 
 | Path | Role |

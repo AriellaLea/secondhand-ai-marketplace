@@ -229,8 +229,8 @@ The work is built one feature at a time, so every phase leaves a working system.
 
 **Still to decide:**
 
-- [ ] Which Ollama model for the assessment, and which embedding model (depends on the computer and on what the lecturer recommends).
-- [ ] Which vector store: Chroma or FAISS with saving to disk.
+- [x] Ollama models: `qwen2.5:3b` for the assessment and `bge-m3` for embeddings (multilingual, handles Hebrew; the same model is used for indexing and for searching). Both are small enough for a Mac with 8 GB of RAM.
+- [x] Vector store: Chroma, saved in a local folder (`data/chroma/`, not committed).
 - [ ] Whether the documents must be written in Hebrew or English.
 - [ ] Which Skill from Skills.sh, and what our own Skill and Rule are.
 - [ ] Whether a seller needs a screen to edit a listing after publishing.

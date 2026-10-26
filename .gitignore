@@ -220,3 +220,6 @@ __marimo__/
 .streamlit/secrets.toml
 .env.local
 .DS_Store
+
+# Local vector database (rebuilt with scripts/load_sample_listings.py)
+data/chroma/

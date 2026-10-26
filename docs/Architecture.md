@@ -16,7 +16,7 @@ The system has three tiers, and each one only talks to its neighbour: the browse
 | --- | --- | --- | --- |
 | Presentation | Pages the user sees (Hebrew, right-to-left) | HTML templates, CSS | Shows data and sends forms. No business logic. |
 | Logic | The Flask application: controllers, command handlers, query handlers | Python, Flask | All rules live here: who may do what, status changes, validation. |
-| Data | Event store, read model, vector database | Cloud SQL database (e.g. Somee.com), Chroma or FAISS (to decide) | Only the logic tier reads or writes it. The agent process uses it through its own tools. |
+| Data | Event store, read model, vector database | Cloud SQL database (e.g. Somee.com), Chroma (local folder `data/chroma/`) | Only the logic tier reads or writes it. The agent process uses it through its own tools. |
 
 The AI agent is a fourth, separate process. It is not part of the web request cycle: it runs on its own and reaches the data through MCP tools (section 9).
 
@@ -120,11 +120,11 @@ If the web search fails, the assessment says so plainly and is still saved.
 
 Building blocks:
 
-- Deep Agent infrastructure (planning and tool use), with an LLM served locally by Ollama.
-- RAG pipeline: load, split, embed with the same embedding model for indexing and querying, store, retrieve.
-- Vector database: Chroma or FAISS.
+- Deep Agent infrastructure (planning and tool use), with the LLM `qwen2.5:3b` served locally by Ollama.
+- RAG pipeline: load, split, embed with the same embedding model (`bge-m3` via Ollama) for indexing and querying, store, retrieve.
+- Vector database: Chroma, persisted in `data/chroma/` (not committed; rebuilt with `scripts/load_sample_listings.py`). Code in `app/vector_store.py`.
 
-The LLM and the embedding model depend on the computer that will run them (GPU and RAM), so they are listed as open decisions in section 11.
+The models are chosen to fit the computer that runs them: a Mac with 8 GB of RAM and no dedicated GPU (section 11).
 
 ## 9. MCP
 
@@ -157,11 +157,14 @@ The two own tools are the two Tools required by the assignment. The agent loads 
 | Agent infrastructure | Deep Agents with RAG and Tavily | Required |
 | Tool protocol | MCP, two own tools built in MCP Studio | Required |
 | Interface | Hebrew, right-to-left | Requirement of the course |
+| Agent LLM | `qwen2.5:3b` via Ollama | Small enough to run locally on 8 GB of RAM |
+| Embedding model | `bge-m3` via Ollama, same model for indexing and searching | Multilingual, handles Hebrew and English listings |
+| Vector database | Chroma, saved in `data/chroma/` | Simple local persistence, no extra server |
 
-Still to decide (depends on the computer that will run the agent):
+Still to decide:
 
-- [ ] Ollama LLM model (GPU and RAM to confirm)
-- [ ] Embedding model
-- [ ] Chroma or FAISS
+- [x] Ollama LLM model: `qwen2.5:3b`
+- [x] Embedding model: `bge-m3`
+- [x] Vector database: Chroma
 - [ ] Language of the documents (confirm with the lecturer)
 - [ ] Skills.sh skill, own Skill and own Rule

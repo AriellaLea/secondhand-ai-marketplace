@@ -10,12 +10,16 @@ Inspect it by hand:
 """
 
 from contextlib import contextmanager
+from typing import Annotated
 from typing_extensions import TypedDict  # pydantic needs this one on Python < 3.12
 
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.exceptions import ToolError
+from mcp.types import ToolAnnotations
+from pydantic import Field
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.commands.record_assessment import (
@@ -23,6 +27,7 @@ from app.commands.record_assessment import (
     RecordAssessmentError,
     handle_record_assessment,
 )
+from app.models.assessment import LISTING_QUALITY_MAX, PRICE_VS_MARKET_MAX, PRICE_VS_SIMILAR_MAX
 from app.queries.get_pending_listing import GetPendingListingQuery, handle_get_pending_listing
 
 mcp = FastMCP(
@@ -34,6 +39,12 @@ mcp = FastMCP(
     ),
 )
 
+
+# The raw driver error (SQL, host) is useless to the agent and should not leak to it.
+DATABASE_ERROR = (
+    "The marketplace database is unreachable; nothing was read or saved. "
+    "Stop this run and try again later."
+)
 
 
 class PendingListingResult(TypedDict):
@@ -80,6 +91,9 @@ def _session() -> Session:
     session = _session_factory()
     try:
         yield session
+    except SQLAlchemyError:
+        session.rollback()
+        raise ToolError(DATABASE_ERROR) from None
     except Exception:
         session.rollback()
         raise
@@ -87,13 +101,24 @@ def _session() -> Session:
         session.close()
 
 
-@mcp.tool()
-def get_pending_listing(exclude_ids: list[str] | None = None) -> PendingListingResult | None:
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="Get next pending listing",
+        readOnlyHint=True,
+        idempotentHint=True,
+        openWorldHint=False,
+    )
+)
+def get_pending_listing(
+    exclude_ids: Annotated[
+        list[str] | None,
+        Field(description="Ids of listings you could not evaluate in this run, to skip them."),
+    ] = None,
+) -> PendingListingResult | None:
     """Get the next listing waiting for evaluation (status Pending evaluation), oldest first.
 
     Returns the listing's id, title, description, price (in ILS), category and
-    created_at, or null when no listing is waiting. Pass in exclude_ids the ids of
-    listings you could not evaluate in this run, to skip them.
+    created_at, or null when no listing is waiting: then stop, there is nothing to do.
     """
     with _session() as session:
         listing = handle_get_pending_listing(
@@ -111,33 +136,44 @@ def get_pending_listing(exclude_ids: list[str] | None = None) -> PendingListingR
     }
 
 
-@mcp.tool()
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="Save listing assessment",
+        readOnlyHint=False,
+        destructiveHint=False,
+        idempotentHint=False,  # a second call for the same listing is refused
+        openWorldHint=False,
+    )
+)
 def save_assessment(
-    listing_id: str,
-    price_vs_market: int,
-    price_vs_market_reason: str,
-    price_vs_similar: int,
-    price_vs_similar_reason: str,
-    listing_quality: int,
-    listing_quality_reason: str,
-    market_price_min: float,
-    market_price_max: float,
-    similar_listing_ids: list[str],
-    reasoning: str,
+    listing_id: Annotated[str, Field(description="The id returned by get_pending_listing.")],
+    price_vs_market: Annotated[int, Field(
+        ge=0, le=PRICE_VS_MARKET_MAX,
+        description="Listing price compared with the market price range found on the web.",
+    )],
+    price_vs_market_reason: Annotated[str, Field(description="One line explaining price_vs_market.")],
+    price_vs_similar: Annotated[int, Field(
+        ge=0, le=PRICE_VS_SIMILAR_MAX,
+        description="Listing price compared with the prices of similar listings.",
+    )],
+    price_vs_similar_reason: Annotated[str, Field(description="One line explaining price_vs_similar.")],
+    listing_quality: Annotated[int, Field(
+        ge=0, le=LISTING_QUALITY_MAX,
+        description="Title, description and category are consistent and detailed.",
+    )],
+    listing_quality_reason: Annotated[str, Field(description="One line explaining listing_quality.")],
+    market_price_min: Annotated[float, Field(gt=0, description="Lowest market price found on the web, in ILS.")],
+    market_price_max: Annotated[float, Field(gt=0, description="Highest market price found on the web, in ILS.")],
+    similar_listing_ids: Annotated[list[str], Field(
+        description="Ids of the similar listings found in the vector database (may be empty).",
+    )],
+    reasoning: Annotated[str, Field(description="A short reasoning in Hebrew for the moderator.")],
 ) -> SavedAssessmentResult:
     """Save your assessment of one listing. The listing then moves to status Evaluated.
 
     Only call this when you have everything below; if the web search or anything
     else failed, do not call it, and the listing will be evaluated again later.
-
-    - listing_id: the id returned by get_pending_listing.
-    - price_vs_market (0-50): listing price compared with the market price range found on the web.
-    - price_vs_similar (0-25): listing price compared with the prices of similar listings.
-    - listing_quality (0-25): title, description and category are consistent and detailed.
-    - each *_reason: one line explaining that sub-score.
-    - market_price_min, market_price_max: market price range found on the web, in ILS.
-    - similar_listing_ids: ids of the similar listings found in the vector database (may be empty).
-    - reasoning: a short reasoning in Hebrew for the moderator.
+    Call it once per listing: a second call for the same listing is refused.
 
     Do not compute the total score or the recommendation: the program does it and
     returns score, recommendation and confidence.

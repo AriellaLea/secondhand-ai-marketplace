@@ -137,11 +137,14 @@ def handle_record_assessment(session: Session, cmd: RecordAssessmentCommand) -> 
 
     listing = session.get(Listing, (cmd.listing_id or "").strip())
     if listing is None:
-        raise RecordAssessmentError(f"No listing with id {cmd.listing_id!r}.")
+        raise RecordAssessmentError(
+            f"No listing with id {cmd.listing_id!r}. Use the id returned by get_pending_listing."
+        )
     # A listing is evaluated once; the moderator decides what happens next.
     if listing.status != STATUS_PENDING_EVALUATION:
         raise RecordAssessmentError(
-            f"Listing {listing.id} is not Pending evaluation (status: {listing.status}); nothing was saved."
+            f"Listing {listing.id} is not Pending evaluation (status: {listing.status}); nothing was saved. "
+            "Call get_pending_listing for the next listing."
         )
 
     price_vs_market = _sub_score("price_vs_market", cmd.price_vs_market, PRICE_VS_MARKET_MAX)

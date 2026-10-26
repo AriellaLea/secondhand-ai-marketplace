@@ -407,3 +407,32 @@ def test_t_arch_6_read_model_rebuilt_from_events_includes_assessments(db, seller
     db.commit()
 
     assert snapshot() == before
+
+
+# --- Errors the agent can act on ------------------------------------------------------------
+
+
+def test_tool_schema_shows_sub_score_ranges():
+    schema = server.mcp._tool_manager.get_tool("save_assessment").parameters["properties"]
+
+    assert (schema["price_vs_market"]["minimum"], schema["price_vs_market"]["maximum"]) == (0, 50)
+    assert schema["price_vs_similar"]["maximum"] == 25
+    assert schema["listing_quality"]["maximum"] == 25
+    assert schema["reasoning"]["description"]
+
+
+def test_database_error_gives_a_short_message_and_saves_nothing(db, seller, agent, monkeypatch):
+    from sqlalchemy.exc import OperationalError
+
+    listing_id = publish(db, seller)
+
+    def broken(*_args, **_kwargs):
+        raise OperationalError("SELECT secret FROM users", {}, Exception("host db.neon.tech refused"))
+
+    monkeypatch.setattr(server, "handle_record_assessment", broken)
+
+    with pytest.raises(ToolError, match="database is unreachable") as error:
+        call("save_assessment", **assessment_args(listing_id))
+
+    assert "SELECT" not in str(error.value) and "neon" not in str(error.value)
+    assert db.get(Listing, listing_id).status == STATUS_PENDING_EVALUATION

@@ -28,12 +28,14 @@ def create_app():
     Base.metadata.create_all(bind=flask_app.engine)
 
     from app.controllers.auth import auth_bp
+    from app.controllers.dashboard import dashboard_bp
     from app.controllers.home import home_bp
     from app.controllers.listings import listings_bp
 
     flask_app.register_blueprint(home_bp)
     flask_app.register_blueprint(auth_bp)
     flask_app.register_blueprint(listings_bp)
+    flask_app.register_blueprint(dashboard_bp)
     flask_app.teardown_appcontext(close_session)
 
     return flask_app

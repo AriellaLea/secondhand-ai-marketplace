@@ -1,4 +1,4 @@
-"""T-ARCH-5 – CQRS: loading search, details and table pages writes nothing."""
+"""T-ARCH-5 – CQRS: loading search, details, table and dashboard pages writes nothing."""
 
 import re
 
@@ -49,6 +49,8 @@ def test_t_arch_5_query_pages_do_not_write(app, client, db):
                 "/listings",
                 "/listings?sort=price&dir=asc&status=approved",
             ]
+            if email == "mod@example.com":
+                urls.append("/dashboard")
             for url in urls:
                 assert client.get(url).status_code == 200, url
     finally:

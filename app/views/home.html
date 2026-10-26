@@ -64,6 +64,8 @@
     <p class="actions">
       {% if user.role == 'seller' %}
         <a class="btn" href="{{ url_for('listings.new') }}">פרסום מודעה חדשה</a>
+      {% else %}
+        <a class="btn" href="{{ url_for('dashboard.index') }}">לוח בקרה</a>
       {% endif %}
       <a class="btn" href="{{ url_for('listings.search') }}">חיפוש מודעות</a>
       <a class="btn" href="{{ url_for('listings.index') }}">טבלת מודעות</a>

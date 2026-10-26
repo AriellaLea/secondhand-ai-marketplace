@@ -16,7 +16,7 @@ The system has three tiers, and each one only talks to its neighbour: the browse
 | --- | --- | --- | --- |
 | Presentation | Pages the user sees (Hebrew, right-to-left) | HTML templates, CSS | Shows data and sends forms. No business logic. |
 | Logic | The Flask application: controllers, command handlers, query handlers | Python, Flask | All rules live here: who may do what, status changes, validation. |
-| Data | Event store, read model, vector database | Cloud SQL database (e.g. Somee.com), Chroma (local folder `data/chroma/`) | Only the logic tier reads or writes it. The agent process uses it through its own tools. |
+| Data | Event store, read model, vector database | Neon PostgreSQL (cloud), Chroma (local folder `data/chroma/`) | Only the logic tier reads or writes it. The agent process uses it through its own tools. |
 
 The AI agent is a fourth, separate process. It is not part of the web request cycle: it runs on its own and reaches the data through MCP tools (section 9).
 
@@ -153,7 +153,7 @@ The two own tools are the two Tools required by the assignment. The agent loads 
 | --- | --- | --- |
 | Web framework | Flask | Required by the assignment |
 | Patterns | MVC, CQRS, Event Sourcing | Required; listing status is a natural fit for events |
-| Cloud database | Somee.com or similar | Suggested in the assignment |
+| Cloud database | Neon PostgreSQL | Cloud database as required by the assignment (Somee.com was suggested); free tier, standard PostgreSQL |
 | Agent infrastructure | Deep Agents with RAG and Tavily | Required |
 | Tool protocol | MCP, two own tools built in MCP Studio | Required |
 | Interface | Hebrew, right-to-left | Requirement of the course |

@@ -194,7 +194,7 @@ These come from the assignment. The technical detail of each goes into architect
 | 2 | At least one Skill from Skills.sh | A Skill from the site, used during development (to be chosen) |
 | 3 | At least one Skill and one Rule of our own | A Skill for building a feature; a Rule that separates commands from queries and requires tests |
 | 4 | Flask application server | A Flask web app in Python |
-| 5 | Cloud database | A database on Somee.com (or another cloud service) |
+| 5 | Cloud database | A PostgreSQL database on Neon (neon.tech) |
 | 6 | Textual data vectorized into a vector database | Each listing's title and description is embedded and stored for semantic search of similar listings |
 | 7 | Server services follow CQRS and MVC | Commands (writes) separated from queries (reads); Model-View-Controller structure |
 | 8 | Data stored in a cloud service with Event Sourcing | A listing's status is rebuilt from its event log |
@@ -208,7 +208,7 @@ These come from the assignment. The technical detail of each goes into architect
 
 The work is built one feature at a time, so every phase leaves a working system. Each phase goes through plan, implementation and validation.
 
-1. **Infrastructure:** GitHub repository, Flask project, Somee database, configuration and secrets (.env).
+1. **Infrastructure:** GitHub repository, Flask project, Neon PostgreSQL database, configuration and secrets (.env).
 2. **F1 – Registration and login** with two roles, in an MVC and CQRS structure.
 3. **F2 – Publish a listing**, recording events (Event Sourcing).
 4. **F3, F4, F5 – Search, listing details and table**, using a separate read model.

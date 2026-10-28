@@ -139,10 +139,12 @@ def find_similar_listings(
     exclude_id: str | None = None,
     collection=None,
     embed: Embedder = ollama_embed,
+    category: str | None = None,
 ) -> list[SimilarListing]:
     """Return the k listings closest in meaning to the given one, most similar first.
 
-    exclude_id skips the listing itself when it is already indexed.
+    exclude_id skips the listing itself when it is already indexed. category keeps only
+    listings of that category (bge-m3 found a baby chair "similar" to a book).
     """
     collection = collection if collection is not None else get_collection()
     n_results = min(k + (1 if exclude_id else 0), collection.count())
@@ -153,6 +155,7 @@ def find_similar_listings(
         query_embeddings=embed([listing_text(title, description)]),
         n_results=n_results,
         include=["metadatas", "distances"],
+        where={"category": category} if category else None,
     )
     similar = []
     for listing_id, metadata, distance in zip(

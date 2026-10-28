@@ -54,7 +54,7 @@ Decisions:
   `web_prices` and `description_matches_title`. The program keeps web
   prices found in the Tavily text, median = new price (<=80% of it: 50, <=100%: 25, above: 0), scores all three
   criteria (quality 25/15/5 from word count + model answer) and writes every Hebrew text (`app/pricing.py`,
-  `app/listing_quality.py`). Search must contain a title word.
+  `app/listing_quality.py`). Search needs half of the title's words; similar listings same category only.
   Answers limited to 1000 tokens via `num_predict` in the derived model (Ollama
   ignores `max_completion_tokens`): rerun `scripts/create_agent_model.py`.
   Neon: run `python scripts/upgrade_assessments_table.py` once.

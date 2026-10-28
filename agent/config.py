@@ -37,7 +37,8 @@ TAVILY_MCP_PACKAGE = "tavily-mcp@0.2.22"
 TAVILY_MAX_SEARCHES = 2
 TAVILY_MAX_RESULTS = 5
 TAVILY_OUTPUT_MAX_CHARS = 3000
-# A search query must contain a word of the listing title at least this long.
+# A search query must contain at least half of the listing title's words; shorter
+# words and plain numbers do not count.
 QUERY_WORD_MIN_LETTERS = 2
 
 LOG_FILE = ROOT / "logs" / "agent.log"

@@ -39,6 +39,7 @@ log = logging.getLogger("agent")
 MISSING_AGENT_ACCOUNT = "create_agent_user"
 
 # A number as written on a web page: 2490, 2,490, 2.490, 1,290.00, 27.5
+HEBREW_PREFIXES = "הבולכמש"
 _NUMBER = re.compile(r"\d+(?:[.,]\d+)*")
 _THOUSANDS = re.compile(r"\d{1,3}(?:[.,]\d{3})+")
 _WITH_DECIMALS = re.compile(r"(\d+(?:[.,]\d{3})*)[.,](\d{1,2})")
@@ -138,9 +139,28 @@ def verified_prices(reported, text: str) -> tuple[list[Decimal], list]:
     return kept, ignored
 
 
+def _words(text: str) -> list[str]:
+    return [word for word in re.findall(r"\w+", text.lower())
+            if len(word) >= QUERY_WORD_MIN_LETTERS and not word.isdigit()]
+
+
+def _same_word(query_word: str, title_word: str) -> bool:
+    # A Hebrew one-letter prefix is fine ("האופניים" for "אופניים"), a longer word is not
+    # ("ספרים" is not "ספר": the model searched a 7-book set for one book).
+    return query_word == title_word or (
+        query_word[:1] in HEBREW_PREFIXES and query_word[1:] == title_word
+    )
+
+
 def query_mentions_title(query: str, title: str) -> bool:
-    words = [word for word in re.findall(r"\w+", title.lower()) if len(word) >= QUERY_WORD_MIN_LETTERS]
-    return any(word in query.lower() for word in words)
+    """At least half of the title's words, as whole words (the model searched with a
+    similar listing's title that shared one word with this one)."""
+    title_words = _words(title)
+    if not title_words:
+        return True
+    query_words = _words(query)
+    found = sum(any(_same_word(q, t) for q in query_words) for t in title_words)
+    return found * 2 >= len(title_words)
 
 
 def _number_from(value) -> Decimal | None:
@@ -177,7 +197,8 @@ def build_tools(
     async def search_similar_listings() -> str:
         try:
             found = await asyncio.to_thread(
-                similar, listing["title"], listing["description"], k=SIMILAR_K, exclude_id=listing["id"]
+                similar, listing["title"], listing["description"], k=SIMILAR_K, exclude_id=listing["id"],
+                category=listing["category"],
             )
         except Exception as exc:  # Ollama or Chroma down
             return run.fail(f"Similar-listing search failed ({exc}). Do not call save_assessment; stop.")
@@ -196,7 +217,7 @@ def build_tools(
         if run.searches >= TAVILY_MAX_SEARCHES:
             return "Search limit reached. Use the results you already have."
         if not query_mentions_title(query, listing["title"]):
-            return (f"Search refused: write the query with words of the listing title "
+            return (f"Search refused: write the query with the words of the listing title "
                     f"({listing['title']}), not of a similar listing. Search again.")
         run.searches += 1
         try:

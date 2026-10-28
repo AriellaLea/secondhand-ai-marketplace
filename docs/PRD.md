@@ -164,7 +164,7 @@ The agent runs as an independent process, reads listings from the database, chec
 **Steps for each listing:**
 
 1. **Read:** the agent fetches a listing with the status Pending evaluation from the database (it checks every few seconds).
-2. **Vector database (RAG):** the title and description are turned into an embedding, and the agent searches the vector database for the most similar listings and their prices.
+2. **Vector database (RAG):** the title and description are turned into an embedding, and the agent searches the vector database for the most similar listings of the same category and their prices.
 3. **Web search:** through Tavily (over MCP), the agent looks up the price of the item new, and reports the prices it read.
 4. **Assessment:** the model judges whether the description is about the item in the title (it never sees the listing price); the program compares the listing price with the web prices and with similar listings, adds up the score and writes the recommendation and its reasoning.
 5. **Save:** the agent stores the assessment through one of our own MCP tools, and the listing moves to Evaluated.

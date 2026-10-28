@@ -86,7 +86,11 @@ def happy_path():
     ]
 
 
-def fake_similar(title, description, k=5, exclude_id=None):
+SIMILAR_CALLS: list[dict] = []  # the arguments of each similar-listing search
+
+
+def fake_similar(title, description, k=5, exclude_id=None, category=None):
+    SIMILAR_CALLS.append({"title": title, "category": category})
     return [
         SimilarListing("sample-13", "אופני הרים 27.5 אינץ'", "sports", 900.0, 0.63),
         SimilarListing("sample-10", "כיסא משרדי", "furniture", 450.0, 0.53),  # below the threshold
@@ -212,7 +216,7 @@ def test_t_agent_5_failed_web_search_saves_nothing(db, seller, agent_account, ta
 def test_save_refused_without_similar_listing_search(db, seller, agent_account):
     listing_id = publish(db, seller)
     messages = [
-        AIMessage(content="", tool_calls=[call("tavily_search", {"query": "אופניים"}, "b")]),
+        AIMessage(content="", tool_calls=[call("tavily_search", {"query": "אופני הרים"}, "b")]),
         AIMessage(content="", tool_calls=[call("save_assessment", save_args(), "c")]),
         AIMessage(content="Done."),
     ]
@@ -480,10 +484,34 @@ def test_search_without_a_title_word_is_refused(db, seller, agent_account, caplo
 @pytest.mark.parametrize(
     "query, ok",
     [("אופני הרים מחיר", True), ("מחיר אופני הרים טרק", True), ("אופני הרים 27.5 מחיר", True),
-     ("iphone 13 price", False), ("כיסא משרדי", False)],
+     ("iphone 13 price", False), ("כיסא משרדי", False),
+     ("טרק מחיר", False)],  # one title word of four is not enough
 )
 def test_query_mentions_title(query, ok):
     assert query_mentions_title(query, "אופני הרים טרק מרלין 7") is ok
+
+
+@pytest.mark.parametrize(
+    "query, ok",
+    [("ספר Harry Potter 1 מחיר", True), ("harry potter מחיר", True),
+     # Seen in a real run: a similar listing's title; "ספרים" is not "ספר".
+     ("סדרת הארי פוטר בעברית, 7 ספרים מחיר", False)],
+)
+def test_query_needs_whole_title_words(query, ok):
+    assert query_mentions_title(query, "ספר Harry Potter 1") is ok
+
+
+def test_hebrew_prefix_is_accepted():
+    assert query_mentions_title("מחיר האופניים החשמליים", "אופניים חשמליים")
+
+
+def test_similar_listings_are_searched_in_the_same_category(db, seller, agent_account):
+    publish(db, seller)  # category sports
+    SIMILAR_CALLS.clear()
+
+    run_agent(happy_path())
+
+    assert SIMILAR_CALLS[0]["category"] == "sports"
 
 
 def test_prices_in_text_reads_the_usual_formats():

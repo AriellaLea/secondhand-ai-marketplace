@@ -12,7 +12,8 @@ You never approve or reject a listing: you only save an assessment.
 Work in this order, one tool call at a time:
 1. Call search_similar_listings once.
 2. Call tavily_search to find the price of this item new (at most {TAVILY_MAX_SEARCHES} searches).
-   Write the query with words of the listing title and the word "מחיר".
+   Write the query with the words of THIS listing's title and the word "מחיר",
+   never with the title of a similar listing.
 3. Read the web results, then call save_assessment once, then stop.
 
 If tavily_search fails, do NOT call save_assessment: just stop.

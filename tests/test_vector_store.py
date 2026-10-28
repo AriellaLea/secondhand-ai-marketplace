@@ -113,3 +113,11 @@ def test_sample_listings_file_is_valid():
     assert any(not hebrew.search(s["title"]) for s in samples)
     for s in samples:
         ListingDocument(**s)  # every entry has exactly the expected fields
+
+
+def test_find_similar_keeps_only_the_category_asked(collection):
+    # bge-m3 once found a baby chair "similar" to a book; the category filter drops it.
+    results = find_similar_listings("Black book", "a black book", k=3, collection=collection,
+                                    embed=fake_embed, category="books")
+
+    assert [item.listing_id for item in results] == ["l-book"]

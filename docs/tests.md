@@ -88,7 +88,8 @@ These prove the three patterns are really used, which is what the oral exam asks
 | T-AGENT-8 | The agent calls its tools | Both own MCP tools and the Tavily service are used, visible in the agent log | ☐ |
 | T-AGENT-9 | The model reports a price that is not in the web results (for example a similar listing's price) | That price is ignored and logged; the new-item price is the median of the others | ☐ |
 | T-AGENT-10 | No web price can be verified | The model is asked once to search again; if still none, the price vs market is 25 of 50 with "no prices were found on the internet" and the confidence is low | ☐ |
-| T-AGENT-11 | The model searches the web without any word of the listing title | The search is refused and not counted; the model searches again | ☐ |
+| T-AGENT-11 | The model searches the web with fewer than half of the listing title's words (for example a similar listing's title) | The search is refused and not counted; the model searches again | ☐ |
+| T-AGENT-12 | Evaluate a book while a chair is in the vector database | Only listings of the same category can be similar listings | ☐ |
 
 ## 6. Non-functional checklist
 

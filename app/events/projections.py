@@ -4,10 +4,16 @@ from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
-from app.events.types import LISTING_CREATED, LISTING_EVALUATED
+from app.events.types import LISTING_APPROVED, LISTING_CREATED, LISTING_EVALUATED, LISTING_REJECTED
 from app.models.assessment import Assessment
 from app.models.event import Event
-from app.models.listing import STATUS_EVALUATED, STATUS_PENDING_EVALUATION, Listing
+from app.models.listing import (
+    STATUS_APPROVED,
+    STATUS_EVALUATED,
+    STATUS_PENDING_EVALUATION,
+    STATUS_REJECTED,
+    Listing,
+)
 
 
 def _apply_listing_created(session: Session, event: Event) -> None:
@@ -55,9 +61,21 @@ def _apply_listing_evaluated(session: Session, event: Event) -> None:
     session.get(Listing, event.listing_id).status = STATUS_EVALUATED
 
 
+def _apply_listing_approved(session: Session, event: Event) -> None:
+    session.get(Listing, event.listing_id).status = STATUS_APPROVED
+
+
+def _apply_listing_rejected(session: Session, event: Event) -> None:
+    listing = session.get(Listing, event.listing_id)
+    listing.status = STATUS_REJECTED
+    listing.rejection_reason = event.payload["reason"]
+
+
 _HANDLERS = {
     LISTING_CREATED: _apply_listing_created,
     LISTING_EVALUATED: _apply_listing_evaluated,
+    LISTING_APPROVED: _apply_listing_approved,
+    LISTING_REJECTED: _apply_listing_rejected,
 }
 
 

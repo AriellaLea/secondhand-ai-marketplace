@@ -127,6 +127,7 @@ How it runs (code in `agent/`):
 - If the web search or the model fails, or the agent stops without saving, nothing is saved: the listing stays Pending evaluation. Its id goes into `exclude_ids` so the queue moves on, and it is tried again 5 minutes later. If the database cannot be read, `--once` stops with "Could not read the pending listings", not as if the queue were empty.
 - At start the agent checks that Ollama answers, that both models exist and that `TAVILY_API_KEY` and `DATABASE_URL` are set. If the agent service account is missing it stops with a clear message.
 - Every tool call is logged to the terminal and to `logs/agent.log` (not committed).
+- Approved listings join the vector database when a moderator approves them (`app/commands/decide_listing.py`, after the approval is committed). If Ollama is down the approval stands, the moderator is warned, and `scripts/index_approved_listings.py` adds the missing ones (upsert, safe to re-run).
 - Known limitation: the 0.55 similarity threshold can let a different item through when titles share a word (a baby high chair matched an office chair, "כיסא"). Tuning it needs new measurements on the sample listings.
 
 Building blocks:
@@ -173,7 +174,8 @@ Implementation:
 
 - Passwords are hashed before storage.
 - Secrets (database connection string, Tavily key) live in `.env.local`, listed in `.gitignore`, never committed.
-- Every controller checks the logged-in user's role on the server; hiding a button is not enough.
+- Every controller checks the logged-in user's role on the server; hiding a button is not enough. The approve and reject commands check the role and the status again.
+- No CSRF protection (out of the course's scope). A page on another site could make a logged-in moderator's browser send an approve or reject; the fix would be the session cookie set to `SameSite=Lax`, or a CSRF token in every form.
 - Only moderators can read assessments and call approve or reject; sellers get no route to them, and query handlers drop the agent score from what they return to a seller.
 - The agent's service account (role `agent`) has a random password that is never shown, and the login refuses any role other than seller or moderator.
 - Registration only creates sellers; moderators have no sign-up form and are created directly in the database by a small script (hashed password). A moderator logs in on the same login page as sellers, and the server reads the role from the users table to decide which pages are available.

@@ -27,12 +27,16 @@ Every test checks one rule from the PRD or one design choice from architecture.m
 | T-F4-1 | F4 Details | Open an approved listing | Title, description, price, category, seller name, date and status are shown | ☐ |
 | T-F4-2 | F4 Details | A seller opens a listing that is not theirs and not approved | The listing is not shown in the seller's pages, so it cannot be clicked; opening its address directly is refused | ☐ |
 | T-F4-3 | F4 Details | A seller opens their own rejected listing | The rejection reason is shown | ☐ |
+| T-F4-4 | F4 Details | A moderator opens a listing that was created, evaluated and decided | The event history shows each event in order, with Israel date and time, who did it and the rejection reason; a seller never sees it | ☐ |
 | T-F5-1 | F5 Listings table | A seller opens the table | Approved listings of others plus all of their own, with statuses, sorted from newest to oldest | ☐ |
 | T-F5-2 | F5 Listings table | A moderator opens the table | All listings, including Pending evaluation | ☐ |
 | T-F6-1 | F6 Dashboard | Open the dashboard | Counts by status and by category match the listings table | ☐ |
 | T-F8-1 | F8 Moderator decision | A moderator approves an Evaluated listing | Status becomes Approved, an Approved event is recorded, and the seller sees it | ☐ |
 | T-F8-2 | F8 Moderator decision | A moderator rejects an Evaluated listing with a reason | Status becomes Rejected, the reason is stored and a Rejected event is recorded | ☐ |
 | T-F8-3 | F8 Moderator decision | A moderator opens a listing whose AI evaluation is still Pending | The Approve and Reject buttons are not displayed until the evaluation is finished; sending the action directly is refused | ☐ |
+| T-F8-4 | F8 Moderator decision | Decide a listing that was already approved or rejected (or two moderators at once) | Refused with "the listing was already handled"; there is only one decision event | ☐ |
+| T-F8-5 | F8 Moderator decision | A seller or a visitor sends approve or reject directly; a moderator sends a reason shorter than 5 characters | Refused, nothing saved; the moderator gets the form back with the error and the text typed | ☐ |
+| T-F8-6 | F8 Moderator decision | Approve with Ollama stopped, then run `scripts/index_approved_listings.py` | The approval stands with a warning; the script adds the listing to the vector database | ☐ |
 
 | T-MCP-1 | Phase 7 MCP tools | Call `get_pending_listing` with two Pending listings, then with the first one in `exclude_ids` | The oldest Pending listing is returned, then the next one; null when none is left; nothing is written | ☐ |
 | T-MCP-2 | Phase 7 MCP tools | Call `save_assessment` with valid sub-scores, price range and similar ids | A Listing evaluated event with the agent as actor; an assessment with the computed score, recommendation and confidence; status Evaluated | ☐ |

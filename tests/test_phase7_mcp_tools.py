@@ -327,8 +327,10 @@ def test_t_mcp_6_moderator_sees_saved_assessment(client, db, seller, agent):
     search = client.get("/listings/search").get_data(as_text=True)
 
     for text in ["80", "40 / 50", "20 / 25", "לאשר", "גבוהה", "400.00", "700.00", "550.00",
-                 "sample-01", "מחיר הוגן ותיאור אמין.", "המחיר מעט מתחת לטווח השוק"]:
+                 "מחיר הוגן ותיאור אמין.", "המחיר מעט מתחת לטווח השוק"]:
         assert text in details
+    # The similar listing ids are kept in the assessment but not shown: they are not titles.
+    assert "sample-01" not in details
     assert "טרם הוערכה" not in details
     assert ">80<" in table
     assert "ציון הסוכן: 80" in search

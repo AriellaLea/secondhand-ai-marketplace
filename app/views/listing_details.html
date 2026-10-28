@@ -19,8 +19,17 @@
     .subscores th, .subscores td { text-align: right; padding: 0.5rem; border-bottom: 1px solid var(--line); vertical-align: top; }
     .subscores td.points { white-space: nowrap; font-weight: 600; }
     .reasoning { white-space: pre-line; line-height: 1.7; margin: 1rem 0 0; }
-    .ids { font-family: ui-monospace, monospace; font-size: 0.85rem; direction: ltr; text-align: left; }
     .back { margin-top: 1.25rem; }
+    section.decision, section.history { margin-top: 1.25rem; background: #fff; border: 1px solid var(--line); border-radius: 0.5rem; padding: 1.5rem; }
+    section.decision h2, section.history h2 { margin: 0 0 0.75rem; font-size: 1.1rem; }
+    .decide { display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: flex-start; }
+    .decide form.reject { flex: 1; min-width: 16rem; display: grid; gap: 0.5rem; }
+    .decide textarea { width: 100%; min-height: 4rem; font: inherit; padding: 0.5rem; border: 1px solid var(--line); border-radius: 0.4rem; box-sizing: border-box; }
+    .decide button { padding: 0.5rem 1.25rem; border: 0; border-radius: 0.4rem; color: #fff; cursor: pointer; font: inherit; }
+    .decide button.approve { background: var(--ok); }
+    .decide button.reject { background: var(--err); justify-self: start; }
+    .events { width: 100%; border-collapse: collapse; }
+    .events th, .events td { text-align: right; padding: 0.5rem; border-bottom: 1px solid var(--line); vertical-align: top; }
 {% endblock %}
 {% block content %}
   {% set item = details.listing %}
@@ -64,14 +73,49 @@
           <dd>{% if a.market_price_min is not none %}{{ "{:,.2f}".format(a.market_price_min) }} – {{ "{:,.2f}".format(a.market_price_max) }} ₪{% else %}לא נמצאו{% endif %}</dd>
           <dt>מחיר מוצר חדש (חציון)</dt>
           <dd>{% if a.market_price_new is not none %}{{ "{:,.2f}".format(a.market_price_new) }} ₪{% else %}—{% endif %}</dd>
-          <dt>מודעות דומות</dt>
-          <dd>{% if a.similar_listing_ids %}<span class="ids">{{ a.similar_listing_ids|join(', ') }}</span>{% else %}לא נמצאו{% endif %}</dd>
           <dt>תאריך הערכה</dt><dd>{{ a.evaluated_at.strftime('%d/%m/%Y %H:%M') }}</dd>
         </dl>
         <p class="reasoning"><strong>נימוק:</strong> {{ a.reasoning }}</p>
       {% else %}
         <p class="muted">המודעה טרם הוערכה על ידי הסוכן.</p>
       {% endif %}
+    </section>
+  {% endif %}
+
+  {% if details.can_decide %}
+    <section class="decision">
+      <h2>החלטת מנהל/ת התוכן</h2>
+      <div class="decide">
+        <form method="post" action="{{ url_for('listings.approve', listing_id=item.id) }}"
+              onsubmit="return confirm('לאשר את המודעה?');">
+          <button type="submit" class="approve">אישור</button>
+        </form>
+        <form method="post" action="{{ url_for('listings.reject', listing_id=item.id) }}" class="reject"
+              onsubmit="return confirm('לדחות את המודעה?');">
+          <label for="reason">סיבת הדחייה (תוצג למוכר/ת)</label>
+          <textarea id="reason" name="reason" required minlength="5" maxlength="1000">{{ reject_reason }}</textarea>
+          <button type="submit" class="reject">דחייה</button>
+        </form>
+      </div>
+    </section>
+  {% endif %}
+
+  {% if details.history %}
+    <section class="history">
+      <h2>היסטוריית המודעה</h2>
+      <table class="events">
+        <thead><tr><th>מתי</th><th>אירוע</th><th>על ידי</th><th>פרטים</th></tr></thead>
+        <tbody>
+          {% for entry in details.history %}
+            <tr>
+              <td>{{ entry.at.strftime('%d/%m/%Y %H:%M') }}</td>
+              <td>{{ entry.event }}</td>
+              <td>{{ entry.actor_name }} ({{ entry.actor_role }})</td>
+              <td>{{ entry.reason or '' }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </section>
   {% endif %}
 

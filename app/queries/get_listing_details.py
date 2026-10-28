@@ -1,13 +1,14 @@
 """Query: one listing's details, filtered by the viewer's role (read side — CQRS, F4)."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
 from app.models.assessment import Assessment
-from app.models.listing import STATUS_REJECTED, Listing
+from app.models.listing import STATUS_EVALUATED, STATUS_REJECTED, Listing
+from app.queries.listing_history import HistoryEntry, listing_history
 from app.queries.listing_read_model import (
     ListingSummary,
     Viewer,
@@ -53,6 +54,9 @@ class ListingDetails:
     # Only a moderator ever gets the agent's assessment section.
     show_assessment: bool
     assessment: AssessmentView | None = None  # None for sellers, or while not evaluated yet
+    # Moderators only: the event history, and whether Approve / Reject are offered (F8).
+    history: list[HistoryEntry] = field(default_factory=list)
+    can_decide: bool = False
 
 
 def _assessment_view(assessment: Assessment) -> AssessmentView:
@@ -91,11 +95,12 @@ def handle_get_listing_details(session: Session, query: GetListingDetailsQuery) 
     if listing.status == STATUS_REJECTED and (is_owner or viewer.is_moderator):
         rejection_reason = listing.rejection_reason
 
-    assessment = None
+    assessment, history = None, []
     if viewer.is_moderator:
         stored = session.get(Assessment, listing.id)
         if stored is not None:
             assessment = _assessment_view(stored)
+        history = listing_history(session, listing.id)
 
     return ListingDetails(
         # A seller never gets the agent score, not even in the DTO.
@@ -103,4 +108,6 @@ def handle_get_listing_details(session: Session, query: GetListingDetailsQuery) 
         rejection_reason=rejection_reason,
         show_assessment=viewer.is_moderator,
         assessment=assessment,
+        history=history,
+        can_decide=viewer.is_moderator and listing.status == STATUS_EVALUATED,
     )

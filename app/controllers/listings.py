@@ -3,6 +3,13 @@
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
 from app.auth import current_user, login_required, role_required
+from app.commands.decide_listing import (
+    ApproveListingCommand,
+    DecideListingError,
+    RejectListingCommand,
+    handle_approve_listing,
+    handle_reject_listing,
+)
 from app.commands.publish_listing import (
     PublishListingCommand,
     PublishListingError,
@@ -67,9 +74,7 @@ def search():
     )
 
 
-@listings_bp.get("/<listing_id>")
-@login_required
-def show(listing_id):
+def _details_page(listing_id: str, reject_reason: str = "", status: int = 200):
     try:
         details = handle_get_listing_details(
             get_session(), GetListingDetailsQuery(viewer=_viewer(), listing_id=listing_id)
@@ -84,7 +89,48 @@ def show(listing_id):
         statuses=STATUS_LABELS,
         recommendations=RECOMMENDATION_LABELS,
         confidences=CONFIDENCE_LABELS,
-    )
+        reject_reason=reject_reason,
+    ), status
+
+
+@listings_bp.get("/<listing_id>")
+@login_required
+def show(listing_id):
+    return _details_page(listing_id)
+
+
+@listings_bp.post("/<listing_id>/approve")
+@role_required("moderator")
+def approve(listing_id):
+    try:
+        result = handle_approve_listing(
+            get_session(), ApproveListingCommand(moderator_id=session["user_id"], listing_id=listing_id)
+        )
+    except DecideListingError as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("listings.show", listing_id=listing_id))
+    flash("המודעה אושרה ומופיעה עכשיו בחיפוש.", "ok")
+    if not result.indexed:
+        flash("המודעה לא נוספה למאגר המודעות הדומות (Ollama אינו זמין). "
+              "יש להריץ: python scripts/index_approved_listings.py", "error")
+    return redirect(url_for("listings.show", listing_id=listing_id))
+
+
+@listings_bp.post("/<listing_id>/reject")
+@role_required("moderator")
+def reject(listing_id):
+    reason = request.form.get("reason", "")
+    try:
+        handle_reject_listing(
+            get_session(),
+            RejectListingCommand(moderator_id=session["user_id"], listing_id=listing_id, reason=reason),
+        )
+    except DecideListingError as exc:
+        get_session().rollback()  # release the row lock before reading the page again
+        flash(str(exc), "error")
+        return _details_page(listing_id, reject_reason=reason, status=400)
+    flash("המודעה נדחתה. הסיבה מוצגת למוכר/ת.", "ok")
+    return redirect(url_for("listings.show", listing_id=listing_id))
 
 
 @listings_bp.get("/new")

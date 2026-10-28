@@ -88,7 +88,7 @@ A listing moves through these statuses: Pending evaluation → Evaluated → App
 **Acceptance criteria:**
 
 - The page shows title, description, price, category, seller name, publication date and status.
-- Only the moderator also sees the agent's assessment: score, market price range found, similar listings and the reasoning.
+- Only the moderator also sees the agent's assessment: score, market price range found and the reasoning (the comparison with similar listings is one of the sub-scores; their ids are stored but not shown).
 - A seller, including the one who published the listing, never sees the agent's assessment.
 - The seller who published a rejected listing sees the reason for the rejection.
 - A seller can open any Approved listing and their own listings in any status, but not another seller's listing that is not yet Approved. A moderator can open any listing.
@@ -136,10 +136,11 @@ A listing moves through these statuses: Pending evaluation → Evaluated → App
 
 **Acceptance criteria:**
 
-- The Approve and Reject buttons appear only on a listing with the status Evaluated and only for a moderator.
-- A rejection requires a reason in text, which is stored and shown to the seller.
+- The Approve and Reject buttons appear only on a listing with the status Evaluated and only for a moderator, on the listing's page under the agent's assessment; the browser asks for confirmation before sending. The moderator may decide against the agent's recommendation.
+- A rejection requires a reason in text (5 to 1,000 characters), which is stored and shown to the seller.
+- A decision is final: an Approved or Rejected listing cannot be decided again. If two moderators decide at the same time, the second is refused ("the listing was already handled").
 - The decision is stored as an event (who decided and when), and the status becomes Approved or Rejected.
-- An approved listing appears immediately in public search (F3).
+- An approved listing appears immediately in public search (F3), and is added to the vector database (section 6). If that fails, the approval stands and the moderator is warned; a script adds the missing listings later.
 
 ## 5. Data
 

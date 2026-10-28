@@ -164,23 +164,28 @@ The agent runs as an independent process, reads listings from the database, chec
 
 1. **Read:** the agent fetches a listing with the status Pending evaluation from the database (it checks every few seconds).
 2. **Vector database (RAG):** the title and description are turned into an embedding, and the agent searches the vector database for the most similar listings and their prices.
-3. **Web search:** through Tavily (over MCP), the agent looks up the market price of the item.
-4. **Assessment:** the model compares the listing price with the market prices and with similar listings, checks that the description and category match, and returns a score, a recommendation and its reasoning.
+3. **Web search:** through Tavily (over MCP), the agent looks up the price of the item new, and reports the prices it read.
+4. **Assessment:** the model judges whether the description is about the item in the title (it never sees the listing price); the program compares the listing price with the web prices and with similar listings, adds up the score and writes the recommendation and its reasoning.
 5. **Save:** the agent stores the assessment through one of our own MCP tools, and the listing moves to Evaluated.
 
-**Output:** score 0–100, recommendation (approve, reject or manual review), market price range, similar listing ids, and a short reasoning in Hebrew.
+**Output:** score 0–100, recommendation (approve, reject or manual review), market price range and new-item price, similar listing ids, and a short reasoning in Hebrew.
 
-**Scoring:** the model rates three criteria and the program adds them up. The model returns each sub-score with a one-line justification, so the moderator can see why a listing got its score.
+**Scoring:** three criteria, each with a one-line justification in Hebrew, so the moderator can see why a listing got its score. A 3B model compares prices badly and slips other scripts into Hebrew, so the program scores the criteria and writes every text; the model only reports the web prices it read and judges the listing quality.
 
-| Criterion | What the agent compares | Points |
+| Criterion | What is compared | Points |
 | --- | --- | --- |
-| Price vs market | The listing price and the price range found on the internet | 50 |
+| Price vs market | The listing price and the new-item price found on the internet | 50 |
 | Price vs similar listings | The listing price and the prices of similar listings in the vector database | 25 |
-| Listing quality | Title, description and category are consistent and detailed enough | 25 |
+| Listing quality (model) | Title, description and category are consistent and detailed enough | 25 |
+
+- **Price vs market:** the web shows mostly new prices, and a used item should cost clearly less than new. The program keeps only the prices the model reported that really appear in the web results, and takes their median as the new-item price (one wrong price barely moves a median). At most 80% of the new price: 50; up to the new price: 25; more: 0 (80% is a starting point, to be tuned). No price found, even after a second search: 25, with "no prices were found on the internet".
+- **Price vs similar listings:** against the median of the similar listings' prices. Up to 1.2 times: 25; up to 1.5 times: 12; more: 0. No similar listing: 12.
+- **Listing quality:** the program counts the words of the description and the model says whether it is about the item in the title. 15 words or more and fitting: 25; 3 to 14 words and fitting: 15; fewer than 3 words or not fitting: 5.
+- **Reasoning:** the three justifications followed by the recommendation, put together by the program.
 
 **Recommendation from the score:** 70 or more: approve; 40 to 69: manual review; below 40: reject. These thresholds are a starting point and will be adjusted during testing.
 
-**Confidence:** computed by the program, not by the model: low when no similar listing was found; high with at least 3 similar listings and a market range where the maximum is at most twice the minimum; medium otherwise.
+**Confidence:** computed by the program, not by the model: low when no similar listing or no web price was found; high with at least 3 similar listings and web prices where the highest is at most twice the lowest; medium otherwise.
 
 **Vector database:** filled from two sources: sample listings loaded at the start (about 30 are enough for testing), and every listing approved afterwards.
 

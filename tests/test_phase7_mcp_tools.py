@@ -73,6 +73,7 @@ def assessment_args(listing_id, **overrides):
         "listing_quality_reason": "תיאור מפורט וקטגוריה נכונה",
         "market_price_min": 400,
         "market_price_max": 700,
+        "market_price_new": 550,
         "similar_listing_ids": ["sample-01", "sample-02", "sample-03"],
         "reasoning": "מחיר הוגן ותיאור אמין.",
     }
@@ -163,6 +164,7 @@ def test_t_mcp_2_save_assessment_records_event_and_read_model(db, seller, agent)
     assert (stored.price_vs_market, stored.price_vs_similar, stored.listing_quality) == (40, 20, 20)
     assert stored.market_price_min == Decimal("400.00")
     assert stored.market_price_max == Decimal("700.00")
+    assert stored.market_price_new == Decimal("550.00")
     assert stored.similar_listing_ids == ["sample-01", "sample-02", "sample-03"]
     assert stored.reasoning == "מחיר הוגן ותיאור אמין."
     assert stored.evaluated_at is not None
@@ -198,6 +200,7 @@ def test_t_mcp_2_recommendation_thresholds(score, expected):
     "similar, low, high, expected",
     [
         (0, "400", "500", "low"),
+        (3, None, None, "low"),  # no price found on the web
         (1, "400", "500", "medium"),
         (2, "400", "500", "medium"),
         (3, "400", "800", "high"),  # max exactly twice min is still a tight range
@@ -206,7 +209,8 @@ def test_t_mcp_2_recommendation_thresholds(score, expected):
     ],
 )
 def test_t_mcp_2_confidence_rule(similar, low, high, expected):
-    assert confidence_for(similar, Decimal(low), Decimal(high)) == expected
+    to_decimal = lambda value: None if value is None else Decimal(value)  # noqa: E731
+    assert confidence_for(similar, to_decimal(low), to_decimal(high)) == expected
 
 
 # --- T-MCP-3: invalid input saves nothing ---------------------------------------------------
@@ -225,6 +229,9 @@ def test_t_mcp_2_confidence_rule(similar, low, high, expected):
         {"market_price_min": 0},
         {"market_price_min": -10},
         {"market_price_min": 800, "market_price_max": 700},
+        {"market_price_new": 800},  # outside the range
+        {"market_price_new": None},  # the range without the new price
+        {"market_price_min": None},
         {"listing_id": "does-not-exist"},
     ],
     ids=lambda overrides: ",".join(overrides),
@@ -240,16 +247,16 @@ def test_t_mcp_3_invalid_assessment_is_refused_and_nothing_saved(db, seller, age
     assert db.query(Assessment).count() == 0
 
 
-def test_t_mcp_3_missing_market_price_is_refused(db, seller, agent):
-    # When the web search fails there is no price range, so nothing can be saved (T-AGENT-5).
+def test_t_mcp_2_no_price_found_on_the_web_is_saved_with_low_confidence(db, seller, agent):
     listing_id = publish(db, seller)
-    args = assessment_args(listing_id)
-    del args["market_price_min"], args["market_price_max"]
 
-    with pytest.raises(ToolError):
-        call("save_assessment", **args)
+    result = call("save_assessment", **assessment_args(
+        listing_id, market_price_min=None, market_price_max=None, market_price_new=None))
 
-    assert db.get(Listing, listing_id).status == STATUS_PENDING_EVALUATION
+    assert result["confidence"] == "low"
+    stored = db.get(Assessment, listing_id)
+    assert (stored.market_price_min, stored.market_price_max, stored.market_price_new) == (None, None, None)
+    assert events_of(db, listing_id)[1].payload["market_price_new"] is None
 
 
 def test_t_mcp_3_missing_agent_account_is_refused(db, seller):
@@ -319,12 +326,23 @@ def test_t_mcp_6_moderator_sees_saved_assessment(client, db, seller, agent):
     table = client.get("/listings").get_data(as_text=True)
     search = client.get("/listings/search").get_data(as_text=True)
 
-    for text in ["80", "40 / 50", "20 / 25", "לאשר", "גבוהה", "400.00", "700.00",
+    for text in ["80", "40 / 50", "20 / 25", "לאשר", "גבוהה", "400.00", "700.00", "550.00",
                  "sample-01", "מחיר הוגן ותיאור אמין.", "המחיר מעט מתחת לטווח השוק"]:
         assert text in details
     assert "טרם הוערכה" not in details
     assert ">80<" in table
     assert "ציון הסוכן: 80" in search
+
+
+def test_moderator_sees_when_no_price_was_found(client, db, seller, agent):
+    listing_id = publish(db, seller)
+    call("save_assessment", **assessment_args(
+        listing_id, market_price_min=None, market_price_max=None, market_price_new=None))
+    login(client, "mod@example.com")
+
+    details = client.get(f"/listings/{listing_id}").get_data(as_text=True)
+
+    assert "טווח מחירי שוק</dt>\n          <dd>לא נמצאו" in details
 
 
 def test_t_mcp_6_seller_never_sees_saved_assessment(client, db, seller, agent):
@@ -372,7 +390,7 @@ def test_t_mcp_7_tools_work_through_an_mcp_client(db, seller, agent):
     tools, pending, bad, good = asyncio.run(scenario())
 
     assert set(tools) == {"get_pending_listing", "save_assessment"}
-    assert set(tools["save_assessment"].inputSchema["required"]) == set(assessment_args("x"))
+    assert set(tools["save_assessment"].inputSchema["required"]) == set(assessment_args("x")) - {"market_price_new"}
     assert unwrap(pending.structuredContent)["id"] == listing_id
     assert bad.isError and "price_vs_market" in bad.content[0].text
     assert not good.isError and unwrap(good.structuredContent)["score"] == 80
@@ -391,7 +409,8 @@ def test_t_arch_6_read_model_rebuilt_from_events_includes_assessments(db, seller
         listings = [(l.id, l.status, l.title, l.price) for l in db.query(Listing).order_by(Listing.id)]
         assessments = [
             (a.listing_id, a.score, a.recommendation, a.confidence, a.market_price_min,
-             a.market_price_max, a.similar_listing_ids, a.reasoning, a.price_vs_market_reason)
+             a.market_price_max, a.market_price_new, a.similar_listing_ids, a.reasoning,
+             a.price_vs_market_reason)
             for a in db.query(Assessment).order_by(Assessment.listing_id)
         ]
         return listings, assessments
@@ -436,3 +455,20 @@ def test_database_error_gives_a_short_message_and_saves_nothing(db, seller, agen
 
     assert "SELECT" not in str(error.value) and "neon" not in str(error.value)
     assert db.get(Listing, listing_id).status == STATUS_PENDING_EVALUATION
+
+
+def test_unreachable_database_at_first_connection_gives_the_short_message(monkeypatch):
+    # Seen offline: the first connection (create_all) failed outside the session guard
+    # and the raw driver error, with the Neon host name, reached the agent.
+    from sqlalchemy.exc import OperationalError
+
+    def unreachable():
+        raise OperationalError("connect", {}, Exception("failed to resolve host ep-x.neon.tech"))
+
+    server._session_factory = None
+    monkeypatch.setattr(server, "_default_engine", unreachable)
+
+    with pytest.raises(ToolError, match="database is unreachable") as error:
+        call("get_pending_listing")
+
+    assert "neon" not in str(error.value)

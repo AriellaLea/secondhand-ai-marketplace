@@ -38,8 +38,9 @@ class AssessmentView:
     listing_quality_reason: str
     recommendation: str
     confidence: str
-    market_price_min: Decimal
-    market_price_max: Decimal
+    market_price_min: Decimal | None  # None when no price was found on the web
+    market_price_max: Decimal | None
+    market_price_new: Decimal | None  # also None in assessments made before it existed
     similar_listing_ids: list[str]
     reasoning: str
     evaluated_at: datetime
@@ -67,6 +68,7 @@ def _assessment_view(assessment: Assessment) -> AssessmentView:
         confidence=assessment.confidence,
         market_price_min=assessment.market_price_min,
         market_price_max=assessment.market_price_max,
+        market_price_new=assessment.market_price_new,
         similar_listing_ids=list(assessment.similar_listing_ids),
         reasoning=assessment.reasoning,
         evaluated_at=assessment.evaluated_at,

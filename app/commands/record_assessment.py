@@ -1,7 +1,8 @@
 """Command: the AI agent records its assessment of a listing (write side — CQRS + Event Sourcing).
 
-The model only rates the three criteria; the program adds them up and derives the
-recommendation and the confidence (PRD section 6). Error messages are in English
+The agent's program sends the three sub-scores (it computes the two price ones itself,
+see app/pricing.py); this command adds them up and derives the recommendation and the
+confidence (PRD section 6). Error messages are in English
 because only the agent's LLM reads them.
 """
 
@@ -51,10 +52,12 @@ class RecordAssessmentCommand:
     price_vs_similar_reason: str
     listing_quality: int
     listing_quality_reason: str
-    market_price_min: float | str
-    market_price_max: float | str
+    # All three or none (no price found on the web); market_price_new is their median.
+    market_price_min: float | str | None
+    market_price_max: float | str | None
     similar_listing_ids: list[str] = field(default_factory=list)
     reasoning: str = ""
+    market_price_new: float | str | None = None
 
 
 @dataclass(frozen=True)
@@ -98,6 +101,28 @@ def _market_price(name: str, value) -> Decimal:
     return price.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
+def _market_prices(cmd: RecordAssessmentCommand) -> tuple[Decimal | None, Decimal | None, Decimal | None]:
+    given = [cmd.market_price_min, cmd.market_price_max, cmd.market_price_new]
+    if all(value is None for value in given):
+        return None, None, None  # no price was found on the web
+    if any(value is None for value in given):
+        raise RecordAssessmentError(
+            "Send market_price_min, market_price_max and market_price_new together, or none of them."
+        )
+    market_min = _market_price("market_price_min", cmd.market_price_min)
+    market_max = _market_price("market_price_max", cmd.market_price_max)
+    market_new = _market_price("market_price_new", cmd.market_price_new)
+    if not market_min <= market_new <= market_max:
+        raise RecordAssessmentError(
+            "market_price_new must be between market_price_min and market_price_max."
+        )
+    return market_min, market_max, market_new
+
+
+def _optional_str(value: Decimal | None) -> str | None:
+    return None if value is None else str(value)
+
+
 def _similar_ids(value, own_id: str) -> list[str]:
     if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
         raise RecordAssessmentError("similar_listing_ids must be a list of listing id strings.")
@@ -119,8 +144,8 @@ def recommendation_for(score: int) -> str:
     return RECOMMENDATION_REJECT
 
 
-def confidence_for(similar_count: int, market_min: Decimal, market_max: Decimal) -> str:
-    if similar_count == 0:
+def confidence_for(similar_count: int, market_min: Decimal | None, market_max: Decimal | None) -> str:
+    if similar_count == 0 or market_min is None:
         return CONFIDENCE_LOW
     wide_range = market_max > market_min * WIDE_RANGE_FACTOR
     if similar_count >= HIGH_CONFIDENCE_MIN_SIMILAR and not wide_range:
@@ -155,10 +180,7 @@ def handle_record_assessment(session: Session, cmd: RecordAssessmentCommand) -> 
     listing_quality_reason = _text("listing_quality_reason", cmd.listing_quality_reason, REASON_MAX)
     reasoning = _text("reasoning", cmd.reasoning, REASONING_MAX)
 
-    market_min = _market_price("market_price_min", cmd.market_price_min)
-    market_max = _market_price("market_price_max", cmd.market_price_max)
-    if market_min > market_max:
-        raise RecordAssessmentError("market_price_min cannot be greater than market_price_max.")
+    market_min, market_max, market_new = _market_prices(cmd)
 
     similar_ids = _similar_ids(cmd.similar_listing_ids, listing.id)
 
@@ -182,8 +204,9 @@ def handle_record_assessment(session: Session, cmd: RecordAssessmentCommand) -> 
             "listing_quality_reason": listing_quality_reason,
             "recommendation": recommendation,
             "confidence": confidence,
-            "market_price_min": str(market_min),
-            "market_price_max": str(market_max),
+            "market_price_min": _optional_str(market_min),
+            "market_price_max": _optional_str(market_max),
+            "market_price_new": _optional_str(market_new),
             "similar_listing_ids": similar_ids,
             "reasoning": reasoning,
         },

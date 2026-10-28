@@ -22,12 +22,16 @@ Done:
   (`app/mcp_tools/server.py`, stdio), Listing evaluated event, `assessments`
   read model shown to moderators in F4/F5, agent service account
   (`scripts/create_agent_user.py`).
+- F7 AI agent: `python -m agent` (`agent/`), Deep Agent per listing, Chroma RAG,
+  Tavily MCP, our two MCP tools; automated tests with a fake LLM and fake Tavily;
+  manual tests T-AGENT-1..8 passed with the real model and Tavily (2026-10-28).
 
 In progress / next:
-- F7 AI agent (Deep Agents + Chroma RAG + Tavily MCP + our two MCP tools),
-  then F8 moderator decision. Plan each with the grilling skill first.
+- F8 moderator decision. Plan it with the grilling skill first.
 - Gap from F4: the moderator's event history of a listing is not shown yet.
-- Before running F7 on Neon: `python scripts/create_agent_user.py` once.
+- Before running F7 on a database: `python scripts/create_agent_user.py` and
+  `python scripts/upgrade_assessments_table.py` once; on a machine:
+  `python scripts/create_agent_model.py` once.
 
 Decisions:
 - Database: Neon PostgreSQL (cloud); tests use temporary SQLite.
@@ -39,3 +43,18 @@ Decisions:
 - MCP: official `mcp` SDK 1.x (`FastMCP`); `langchain-mcp-adapters` needs `mcp<2`.
 - If web search or the model fails, nothing is saved; the listing stays Pending.
 - The program, not the LLM, adds up the score and sets recommendation and confidence.
+- Agent LLM via Ollama's OpenAI-compatible `/v1` (`langchain-openai`, no proxy),
+  derived model `qwen2.5:3b-agent` (num_ctx 8192, temperature 0).
+- Agent guards are in code: no save without a successful RAG and web search;
+  the program fills listing_id and similar ids (RAG, similarity >= 0.55);
+- If the model stops without saving while it still could, the program reminds it once.
+- Fix K: the model writes no text and never sees the listing price. It reports
+  `web_prices` and `description_matches_title`. The program keeps web
+  prices found in the Tavily text, median = new price (<=80% of it: 50, <=100%: 25, above: 0), scores all three
+  criteria (quality 25/15/5 from word count + model answer) and writes every Hebrew text (`app/pricing.py`,
+  `app/listing_quality.py`). Search must contain a title word.
+  Answers limited to 1000 tokens via `num_predict` in the derived model (Ollama
+  ignores `max_completion_tokens`): rerun `scripts/create_agent_model.py`.
+  Neon: run `python scripts/upgrade_assessments_table.py` once.
+- Prompt never gives concrete examples (the 3B model copied them).
+- Deep Agents file tools, sub-agents and `write_todos` are hidden.

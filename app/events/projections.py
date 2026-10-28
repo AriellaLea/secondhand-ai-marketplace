@@ -26,6 +26,10 @@ def _apply_listing_created(session: Session, event: Event) -> None:
     )
 
 
+def _decimal(value: str | None) -> Decimal | None:
+    return None if value is None else Decimal(value)
+
+
 def _apply_listing_evaluated(session: Session, event: Event) -> None:
     data = event.payload
     session.add(
@@ -40,8 +44,9 @@ def _apply_listing_evaluated(session: Session, event: Event) -> None:
             listing_quality_reason=data["listing_quality_reason"],
             recommendation=data["recommendation"],
             confidence=data["confidence"],
-            market_price_min=Decimal(data["market_price_min"]),
-            market_price_max=Decimal(data["market_price_max"]),
+            market_price_min=_decimal(data["market_price_min"]),
+            market_price_max=_decimal(data["market_price_max"]),
+            market_price_new=_decimal(data.get("market_price_new")),  # absent in older events
             similar_listing_ids=data["similar_listing_ids"],
             reasoning=data["reasoning"],
             evaluated_at=event.created_at,

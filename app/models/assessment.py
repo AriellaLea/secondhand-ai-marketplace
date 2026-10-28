@@ -51,8 +51,10 @@ class Assessment(Base):
     listing_quality_reason: Mapped[str] = mapped_column(Text, nullable=False)
     recommendation: Mapped[str] = mapped_column(String(20), nullable=False)
     confidence: Mapped[str] = mapped_column(String(10), nullable=False)
-    market_price_min: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)  # ILS
-    market_price_max: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)  # ILS
+    # Prices found on the web, in ILS; all three are empty when none was found.
+    market_price_min: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    market_price_max: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    market_price_new: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)  # median
     similar_listing_ids: Mapped[list] = mapped_column(JSON, nullable=False)
     reasoning: Mapped[str] = mapped_column(Text, nullable=False)  # Hebrew
     evaluated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

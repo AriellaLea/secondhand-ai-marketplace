@@ -223,3 +223,6 @@ __marimo__/
 
 # Local vector database (rebuilt with scripts/load_sample_listings.py)
 data/chroma/
+
+# Agent log (python -m agent)
+logs/

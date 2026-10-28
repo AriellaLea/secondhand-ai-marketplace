@@ -87,7 +87,10 @@ def _default_engine() -> Engine:
 @contextmanager
 def _session() -> Session:
     if _session_factory is None:
-        configure(_default_engine())
+        try:
+            configure(_default_engine())  # connects once (create_all): may fail too
+        except SQLAlchemyError:
+            raise ToolError(DATABASE_ERROR) from None
     session = _session_factory()
     try:
         yield session
@@ -162,12 +165,19 @@ def save_assessment(
         description="Title, description and category are consistent and detailed.",
     )],
     listing_quality_reason: Annotated[str, Field(description="One line explaining listing_quality.")],
-    market_price_min: Annotated[float, Field(gt=0, description="Lowest market price found on the web, in ILS.")],
-    market_price_max: Annotated[float, Field(gt=0, description="Highest market price found on the web, in ILS.")],
+    market_price_min: Annotated[float | None, Field(
+        gt=0, description="Lowest market price found on the web, in ILS; null if none was found.",
+    )],
+    market_price_max: Annotated[float | None, Field(
+        gt=0, description="Highest market price found on the web, in ILS; null if none was found.",
+    )],
     similar_listing_ids: Annotated[list[str], Field(
         description="Ids of the similar listings found in the vector database (may be empty).",
     )],
     reasoning: Annotated[str, Field(description="A short reasoning in Hebrew for the moderator.")],
+    market_price_new: Annotated[float | None, Field(
+        gt=0, description="New-item price in ILS: the median of the web prices; null if none was found.",
+    )] = None,
 ) -> SavedAssessmentResult:
     """Save your assessment of one listing. The listing then moves to status Evaluated.
 
@@ -190,6 +200,7 @@ def save_assessment(
         market_price_max=market_price_max,
         similar_listing_ids=similar_listing_ids,
         reasoning=reasoning,
+        market_price_new=market_price_new,
     )
     try:
         with _session() as session:

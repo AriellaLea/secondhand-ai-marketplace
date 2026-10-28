@@ -112,17 +112,39 @@ For each pending listing it:
 
 1. Reads the listing through an MCP tool.
 2. Searches the vector database (RAG) for similar listings: about 30 sample listings plus approved ones.
-3. Searches the web with Tavily for market prices of similar items.
-4. Produces the assessment: score (50/25/25 across three criteria, as in the PRD), recommendation, price range, similar listing ids, reasoning, confidence.
+3. Searches the web with Tavily for the new price of the item.
+4. Produces the assessment: score (50/25/25 across three criteria, as in the PRD), recommendation, price range and new-item price, similar listing ids, reasoning, confidence. The model judges whether the description fits the title; the program scores and writes every text (`app/pricing.py`, `app/listing_quality.py`).
 5. Saves it through a second MCP tool, which raises the Listing evaluated event.
 
-If the web search or the model fails, nothing is saved: the listing stays Pending evaluation and is tried again later. Within one run the agent passes the ids it failed on to `get_pending_listing` (`exclude_ids`), so one bad listing does not block the queue.
+How it runs (code in `agent/`):
+
+- A Python loop (`agent/__main__.py`) calls `get_pending_listing` every 10 seconds. For each listing it starts a fresh Deep Agent (`agent/runner.py`) with the listing in its first message, a 10-minute limit (about 4 minutes on the 8 GB Mac) and a step limit.
+- The agent sees three tools: `search_similar_listings` (RAG, a local tool), `tavily_search` (Tavily MCP) and `save_assessment` (our MCP tool), and decides when to call each. The Deep Agents file tools, sub-agents and `write_todos` are hidden: a 3B model gets lost among them, and its steps are fixed.
+- The model sees a reduced `save_assessment` with two fields: `web_prices` (every price of the item it read in the web results) and `description_matches_title` (true or false). It writes no text, and its first message holds the title, description and category but not the price: when it saw the price it picked the web price closest to it (6500 for a 6000 listing). In real runs `qwen2.5:3b` copied a similar listing's price as the market range, invented ranges (500–10,000), compared prices wrongly, and slipped Greek, Cyrillic or Chinese letters into its Hebrew (every time it wrote "קטגוריה"), so the program does the rest and then calls our MCP `save_assessment` with every field.
+- Price checks and scoring in the program (`agent/tools.py`, rules in `app/pricing.py`): a web price is kept only if it appears in the web results the model read (`2,490`, `2490`, `2.490` and `1,290.00` are understood), the others are ignored and logged; their median is the new-item price; the program computes the three sub-scores (quality from the description's word count and the model's answer: 25, 15 or 5), writes their Hebrew reasons and builds the reasoning (the three reasons and the recommendation). With no verified price the model is told once to search again; if there is still none, the listing is saved with a neutral price score and low confidence.
+- Other guards in the program, not in the prompt: `save_assessment` is refused unless the similar-listing search ran and a web search returned results; the program fills in `listing_id` and the similar listing ids (those the RAG returned with a similarity of at least 0.55: a small model invents ids); a web search must contain a word of the listing title (the model searched with a similar listing's title); missing or invalid fields get a short hint; a `save_assessment` called together with other tools is refused with the reason, since it was written before their results were known (Ollama ignores `parallel_tool_calls`); at most 2 web searches per listing; each model answer is limited to 1000 tokens (the model once generated 2412 tokens for 10 minutes); the limit is `num_predict` in the derived model, since Ollama ignores the `max_completion_tokens` that `langchain-openai` sends.
+- A 3B model often stops after a refusal: if it stops without saving while both searches succeeded, the program reminds it once to call `save_assessment` (same conversation, kept by an in-memory checkpointer).
+- If the web search or the model fails, or the agent stops without saving, nothing is saved: the listing stays Pending evaluation. Its id goes into `exclude_ids` so the queue moves on, and it is tried again 5 minutes later. If the database cannot be read, `--once` stops with "Could not read the pending listings", not as if the queue were empty.
+- At start the agent checks that Ollama answers, that both models exist and that `TAVILY_API_KEY` and `DATABASE_URL` are set. If the agent service account is missing it stops with a clear message.
+- Every tool call is logged to the terminal and to `logs/agent.log` (not committed).
+- Known limitation: the 0.55 similarity threshold can let a different item through when titles share a word (a baby high chair matched an office chair, "כיסא"). Tuning it needs new measurements on the sample listings.
 
 Building blocks:
 
-- Deep Agent infrastructure (planning and tool use), with the LLM `qwen2.5:3b` served locally by Ollama.
+- Deep Agent infrastructure (`deepagents`, tool use and middleware), with the LLM `qwen2.5:3b` served locally by Ollama. The agent uses a derived model, `qwen2.5:3b-agent` (context 8192, temperature 0, at most 1000 tokens per answer), created by `scripts/create_agent_model.py`; `AGENT_MODEL` can name another one.
+- The LLM is called through Ollama's OpenAI-compatible endpoint (`/v1`) with `langchain-openai`, not through the `ollama` package, which hangs.
 - RAG pipeline: load, split, embed with the same embedding model (`bge-m3` via Ollama) for indexing and querying, store, retrieve.
 - Vector database: Chroma, persisted in `data/chroma/` (not committed; rebuilt with `scripts/load_sample_listings.py`). Code in `app/vector_store.py`.
+- MCP servers: ours (`python -m app.mcp_tools.server`) and Tavily (`npx -y tavily-mcp@0.2.22`), both over stdio, each with one session kept open for the whole run.
+
+Run it:
+
+```
+python scripts/create_agent_user.py    # once per database
+python scripts/upgrade_assessments_table.py  # once, on a database created before fix K
+python scripts/create_agent_model.py   # once per machine
+python -m agent                        # or: python -m agent --once
+```
 
 The models are chosen to fit the computer that runs them: a Mac with 8 GB of RAM and no dedicated GPU (section 11).
 
@@ -133,10 +155,10 @@ MCP (Model Context Protocol) is the standard way the agent calls tools. Each too
 | Tool | Built with | What it does |
 | --- | --- | --- |
 | `get_pending_listing(exclude_ids=[])` | Our own tool (FastMCP), tested in MCP Inspector | Returns the oldest listing in status Pending evaluation (id, title, description, price, category, created at), or null. Reads only, locks nothing. |
-| `save_assessment(...)` | Our own tool (FastMCP), tested in MCP Inspector | Takes the three sub-scores with a one-line reason each, the market price range, the similar listing ids and the Hebrew reasoning. The program adds up the score and derives the recommendation and the confidence, then raises the Listing evaluated event. Refused if the listing is not Pending evaluation or any field is invalid; then nothing is saved. |
+| `save_assessment(...)` | Our own tool (FastMCP), tested in MCP Inspector | Takes the three sub-scores with a one-line reason each, the market price range and new-item price (all three empty when no web price was found), the similar listing ids and the Hebrew reasoning; the agent's program fills them all. The program adds up the score and derives the recommendation and the confidence, then raises the Listing evaluated event. Refused if the listing is not Pending evaluation or any field is invalid; then nothing is saved. |
 | Web search | Tavily MCP service | Finds market prices for similar items on the web |
 
-The two own tools are the two Tools required by the assignment. The agent loads them with `load_mcp_tools` and decides when to call each one.
+The two own tools are the two Tools required by the assignment. The agent process loads them with `load_mcp_tools`: the program's loop calls `get_pending_listing`, and the LLM decides when to call `save_assessment` and `tavily_search`.
 
 Implementation:
 

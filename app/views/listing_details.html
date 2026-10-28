@@ -60,7 +60,10 @@
           </tbody>
         </table>
         <dl>
-          <dt>טווח מחירי שוק</dt><dd>{{ "{:,.2f}".format(a.market_price_min) }} – {{ "{:,.2f}".format(a.market_price_max) }} ₪</dd>
+          <dt>טווח מחירי שוק</dt>
+          <dd>{% if a.market_price_min is not none %}{{ "{:,.2f}".format(a.market_price_min) }} – {{ "{:,.2f}".format(a.market_price_max) }} ₪{% else %}לא נמצאו{% endif %}</dd>
+          <dt>מחיר מוצר חדש (חציון)</dt>
+          <dd>{% if a.market_price_new is not none %}{{ "{:,.2f}".format(a.market_price_new) }} ₪{% else %}—{% endif %}</dd>
           <dt>מודעות דומות</dt>
           <dd>{% if a.similar_listing_ids %}<span class="ids">{{ a.similar_listing_ids|join(', ') }}</span>{% else %}לא נמצאו{% endif %}</dd>
           <dt>תאריך הערכה</dt><dd>{{ a.evaluated_at.strftime('%d/%m/%Y %H:%M') }}</dd>

@@ -1,0 +1,3 @@
+display_name: 'MCP Builder'
+short_description: 'Design and implement MCP servers around agent workflows.'
+default_prompt: 'Help me build or refactor an MCP server.'

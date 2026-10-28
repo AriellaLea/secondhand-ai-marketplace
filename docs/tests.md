@@ -36,7 +36,7 @@ Every test checks one rule from the PRD or one design choice from architecture.m
 
 | T-MCP-1 | Phase 7 MCP tools | Call `get_pending_listing` with two Pending listings, then with the first one in `exclude_ids` | The oldest Pending listing is returned, then the next one; null when none is left; nothing is written | ☐ |
 | T-MCP-2 | Phase 7 MCP tools | Call `save_assessment` with valid sub-scores, price range and similar ids | A Listing evaluated event with the agent as actor; an assessment with the computed score, recommendation and confidence; status Evaluated | ☐ |
-| T-MCP-3 | Phase 7 MCP tools | Call `save_assessment` with a sub-score out of range, an empty reason, a missing price range or min above max | A tool error is returned; no event, no assessment, status stays Pending evaluation | ☐ |
+| T-MCP-3 | Phase 7 MCP tools | Call `save_assessment` with a sub-score out of range, an empty reason, min above max, a new price outside the range, or only some of the three market prices | A tool error is returned; no event, no assessment, status stays Pending evaluation (no market price at all is accepted, with low confidence) | ☐ |
 | T-MCP-4 | Phase 7 MCP tools | Call `save_assessment` twice for the same listing | The second call is refused; there is only one Listing evaluated event | ☐ |
 | T-MCP-5 | Phase 7 MCP tools | Try to log in with the agent account | Login is refused | ☐ |
 | T-MCP-6 | Phase 7 MCP tools | After `save_assessment`, open the listing as moderator and as seller | The moderator sees score, sub-scores, reasons, recommendation, confidence, price range and reasoning, and the score in the table; the seller sees none of it | ☐ |
@@ -82,6 +82,9 @@ These prove the three patterns are really used, which is what the oral exam asks
 | T-AGENT-6 | Stop the agent and publish two listings | Both stay Pending evaluation until the agent restarts, then both get evaluated | ☐ |
 | T-AGENT-7 | Check the agent's actions after an evaluation | It never approved or rejected anything; the only new event is Listing evaluated | ☐ |
 | T-AGENT-8 | The agent calls its tools | Both own MCP tools and the Tavily service are used, visible in the agent log | ☐ |
+| T-AGENT-9 | The model reports a price that is not in the web results (for example a similar listing's price) | That price is ignored and logged; the new-item price is the median of the others | ☐ |
+| T-AGENT-10 | No web price can be verified | The model is asked once to search again; if still none, the price vs market is 25 of 50 with "no prices were found on the internet" and the confidence is low | ☐ |
+| T-AGENT-11 | The model searches the web without any word of the listing title | The search is refused and not counted; the model searches again | ☐ |
 
 ## 6. Non-functional checklist
 

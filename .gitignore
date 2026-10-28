@@ -226,3 +226,8 @@ data/chroma/
 
 # Agent log (python -m agent)
 logs/
+
+# Claude Code: local settings, and skills installed from Skills.sh (they live in .agents/)
+.claude/settings.local.json
+.claude/skills/grilling/
+.claude/skills/mcp-builder

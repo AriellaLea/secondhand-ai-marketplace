@@ -199,8 +199,8 @@ These come from the assignment. The technical detail of each goes into architect
 | # | Requirement | How the project meets it |
 | --- | --- | --- |
 | 1 | Development based on organized Markdown documents | A docs folder with the PRD, the architecture and a test plan |
-| 2 | At least one Skill from Skills.sh | A Skill from the site, used during development (to be chosen) |
-| 3 | At least one Skill and one Rule of our own | A Skill for building a feature; a Rule that separates commands from queries and requires tests |
+| 2 | At least one Skill from Skills.sh | `grilling` (mattpocock/skills), used to plan every feature, and `mcp-builder`, used for the MCP tools; installed in `.agents/skills/` |
+| 3 | At least one Skill and one Rule of our own | The Skill `new-feature` (`.claude/skills/new-feature/`): our steps from the docs to the commit; the Rule `agent-never-decides` (`.claude/rules/`): the AI agent never approves or rejects a listing |
 | 4 | Flask application server | A Flask web app in Python |
 | 5 | Cloud database | A PostgreSQL database on Neon (neon.tech) |
 | 6 | Textual data vectorized into a vector database | Each listing's title and description is embedded and stored for semantic search of similar listings |

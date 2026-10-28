@@ -291,3 +291,19 @@ def test_catch_up_script_takes_only_approved_listings(client, db, people):
     client.post(f"/listings/{approved}/approve")
 
     assert [doc.listing_id for doc in approved_documents(db)] == [approved]
+
+
+def test_t_f8_5_agent_account_can_never_decide(db, people):
+    # .claude/rules/agent-never-decides.md: the agent only gives an opinion.
+    alice, _ = people
+    listing_id = evaluated(db, alice)
+    agent = db.query(User).filter_by(email=AGENT_EMAIL).one()
+
+    with pytest.raises(decide_listing.DecideListingError):
+        decide_listing.handle_approve_listing(db, decide_listing.ApproveListingCommand(agent.id, listing_id))
+    db.rollback()
+    with pytest.raises(decide_listing.DecideListingError):
+        decide_listing.handle_reject_listing(db, decide_listing.RejectListingCommand(agent.id, listing_id, REASON))
+    db.rollback()
+
+    assert status_of(db, listing_id) == STATUS_EVALUATED

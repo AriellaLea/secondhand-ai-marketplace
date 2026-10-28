@@ -115,10 +115,10 @@ A five-minute path through the app that shows every requirement in order.
 
 1. Register a new seller and log in.
 2. Publish a listing; show that its status is Pending evaluation.
-3. Start the agent; show that it evaluates the listing on its own.
+3. The agent already runs in a second terminal (`python -m agent`); show its log as it evaluates the listing on its own (RAG, Tavily, save through MCP).
 4. As the seller, show that the assessment is not visible.
-5. Log in as the moderator; open the listing and show the score, reasoning and price range.
-6. Approve the listing; show it in the seller's table and in the search results.
+5. Log in as the moderator; open the listing and show the score, the three sub-scores with their reasons, the new-item price and the recommendation.
+6. Approve the listing (confirmation dialog); show it in the seller's table and in the search results. Reject another one with a reason and show the reason on the seller's side.
 7. Open the dashboard and check the counts.
-8. Open the events table and show the created, evaluated and approved events for that listing.
-9. Show one controller, one command handler and one query handler to explain MVC and CQRS.
+8. On the listing's page, show the event history: created by the seller, evaluated by the agent, approved by the moderator.
+9. Show one controller, one command handler and one query handler to explain MVC and CQRS, and the Rule `agent-never-decides` and the Skill `new-feature`.

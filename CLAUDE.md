@@ -28,9 +28,11 @@ Done:
 - F8 moderator decision: approve/reject on the details page (`app/commands/decide_listing.py`),
   Listing approved/rejected events, approved listings indexed in Chroma (best effort,
   catch-up `scripts/index_approved_listings.py`), moderator-only event history (F4 gap).
+- All tests in `docs/tests.md` ticked (2026-10-29): pytest 196 passed, browser checks
+  F1 and T-ROLE-4/5 passed, final checklist complete.
 
 In progress / next:
-- F8 manual tests in the browser.
+- Rehearse the oral demo (`docs/tests.md` §7); activate `.venv` in both terminals.
 - Before running F7 on a database: `python scripts/create_agent_user.py` and
   `python scripts/upgrade_assessments_table.py` once; on a machine:
   `python scripts/create_agent_model.py` once.
